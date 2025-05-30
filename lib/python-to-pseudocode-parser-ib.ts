@@ -42,28 +42,28 @@ export class IBParser {
     for (const fn of chain) { const r = fn.bind(this)(s, i); if (r.convertedLine !== s) return r; }
     return { convertedLine: i + s, blockType: null };
   }
-  private fun(s: string, i: string) { const m = s.match(/^def\s+(\w+)\((.*?)\)\s*:/); return m ? { convertedLine: `${i}FUNCTION ${m[1]}(${m[2]})`, blockType: "function" } : { convertedLine: s, blockType: null }; }
-  private procDec(s: string, i: string) { if (!s.includes("# procedure")) return { convertedLine: s, blockType: null }; const m = s.match(/^def\s+(\w+)\((.*?)\)/); return m ? { convertedLine: `${i}PROCEDURE ${m[1]}(${m[2]})`, blockType: "procedure" } : { convertedLine: s, blockType: null }; }
-  private cls(s: string, i: string) { const m = s.match(/^class\s+(\w+)(?:\((\w+)\))?\s*:/); return m ? { convertedLine: `${i}CLASS ${m[1]}${m[2] ? ` EXTENDS ${m[2]}` : ""}`, blockType: "class" } : { convertedLine: s, blockType: null }; }
-  private ifc(s: string, i: string) { return s.startsWith("if ") ? { convertedLine: `${i}IF ${this.cond(s.slice(3, -1))} THEN`, blockType: "if" } : { convertedLine: s, blockType: null }; }
-  private elif(s: string, i: string) { return s.startsWith("elif ") ? { convertedLine: `${i}ELSE IF ${this.cond(s.slice(5, -1))} THEN`, blockType: "elif" } : { convertedLine: s, blockType: null }; }
-  private els(s: string, i: string) { return s === "else:" ? { convertedLine: `${i}ELSE`, blockType: "else" } : { convertedLine: s, blockType: null }; }
+  private fun(s: string, i: string) { const m = s.match(/^def\s+(\w+)\((.*?)\)\s*:/); return m ? { convertedLine: `${i}FUNCTION ${m[1]}(${m[2]})`, blockType: "function" as BlockType } : { convertedLine: s, blockType: null }; }
+  private procDec(s: string, i: string) { if (!s.includes("# procedure")) return { convertedLine: s, blockType: null }; const m = s.match(/^def\s+(\w+)\((.*?)\)/); return m ? { convertedLine: `${i}PROCEDURE ${m[1]}(${m[2]})`, blockType: "procedure" as BlockType } : { convertedLine: s, blockType: null }; }
+  private cls(s: string, i: string) { const m = s.match(/^class\s+(\w+)(?:\((\w+)\))?\s*:/); return m ? { convertedLine: `${i}CLASS ${m[1]}${m[2] ? ` EXTENDS ${m[2]}` : ""}`, blockType: "class" as BlockType } : { convertedLine: s, blockType: null }; }
+  private ifc(s: string, i: string) { return s.startsWith("if ") ? { convertedLine: `${i}IF ${this.cond(s.slice(3, -1))} THEN`, blockType: "if" as BlockType } : { convertedLine: s, blockType: null }; }
+  private elif(s: string, i: string) { return s.startsWith("elif ") ? { convertedLine: `${i}ELSE IF ${this.cond(s.slice(5, -1))} THEN`, blockType: "elif" as BlockType } : { convertedLine: s, blockType: null }; }
+  private els(s: string, i: string) { return s === "else:" ? { convertedLine: `${i}ELSE`, blockType: "else" as BlockType } : { convertedLine: s, blockType: null }; }
   private forRange(s: string, i: string) {
     if (!s.startsWith("for ") || !s.includes("range(")) return { convertedLine: s, blockType: null };
     const m = s.match(/for\s+(\w+)\s+in\s+range\(([^)]*)\)\s*:/); if (!m) return { convertedLine: s, blockType: null };
     const [_, v, arg] = m; const args = arg.split(",").map(a => a.trim());
-    if (args.length === 1) { const end = parseInt(args[0]); return { convertedLine: `${i}loop ${v} from 0 to ${end - 1}`, blockType: "for" }; }
-    else if (args.length >= 2) { const start = parseInt(args[0]), end = parseInt(args[1]); return { convertedLine: `${i}loop ${v} from ${start} to ${end - 1}`, blockType: "for" }; }
+    if (args.length === 1) { const end = parseInt(args[0]); return { convertedLine: `${i}loop ${v} from 0 to ${end - 1}`, blockType: "for" as BlockType }; }
+    else if (args.length >= 2) { const start = parseInt(args[0]), end = parseInt(args[1]); return { convertedLine: `${i}loop ${v} from ${start} to ${end - 1}`, blockType: "for" as BlockType }; }
     return { convertedLine: s, blockType: null };
   }
-  private forColl(s: string, i: string) { const m = s.match(/for\s+(\w+)\s+in\s+(\w+)\s*:/); if (!m) return { convertedLine: s, blockType: null }; const [_, v, col] = m; this.s.out.push(`${i}${col}.resetNext()`); this.s.out.push(`${i}loop while ${col}.hasNext()`); this.s.out.push(`${i}    ${v} ${OP.ASSIGN} ${col}.getNext()`); return { convertedLine: "", blockType: "for" }; }
-  private whilec(s: string, i: string) { return s.startsWith("while ") ? { convertedLine: `${i}WHILE ${this.cond(s.slice(6, -1))} DO`, blockType: "while" } : { convertedLine: s, blockType: null }; }
-  private repeat(s: string, i: string) { return s.includes("# repeat") ? { convertedLine: `${i}REPEAT`, blockType: "repeat" } : { convertedLine: s, blockType: null }; }
-  private matchStart(s: string, i: string) { const m = s.match(/^match\s+(\w+)\s*:/); return m ? { convertedLine: `${i}CASE OF ${m[1]}`, blockType: "case" } : { convertedLine: s, blockType: null }; }
+  private forColl(s: string, i: string) { const m = s.match(/for\s+(\w+)\s+in\s+(\w+)\s*:/); if (!m) return { convertedLine: s, blockType: null }; const [_, v, col] = m; this.s.out.push(`${i}${col}.resetNext()`); this.s.out.push(`${i}loop while ${col}.hasNext()`); this.s.out.push(`${i}    ${v} ${OP.ASSIGN} ${col}.getNext()`); return { convertedLine: "", blockType: "for" as BlockType }; }
+  private whilec(s: string, i: string) { return s.startsWith("while ") ? { convertedLine: `${i}WHILE ${this.cond(s.slice(6, -1))} DO`, blockType: "while" as BlockType } : { convertedLine: s, blockType: null }; }
+  private repeat(s: string, i: string) { return s.includes("# repeat") ? { convertedLine: `${i}REPEAT`, blockType: "repeat" as BlockType } : { convertedLine: s, blockType: null }; }
+  private matchStart(s: string, i: string) { const m = s.match(/^match\s+(\w+)\s*:/); return m ? { convertedLine: `${i}CASE OF ${m[1]}`, blockType: "case" as BlockType } : { convertedLine: s, blockType: null }; }
+  private tryb(s: string, i: string) { if (s !== "try:") return { convertedLine: s, blockType: null }; this.s.openTry = true; return { convertedLine: `${i}TRY`, blockType: "try" as BlockType }; }
+  private finallyb(s: string, i: string) { return s === "finally:" ? { convertedLine: `${i}FINALLY`, blockType: "finally" as BlockType } : { convertedLine: s, blockType: null }; }
   private matchCase(s: string, i: string) { const m = s.match(/^case\s+(.+?)\s*:/); return m ? { convertedLine: `${i}${m[1]} :`, blockType: null } : { convertedLine: s, blockType: null }; }
-  private tryb(s: string, i: string) { if (s !== "try:") return { convertedLine: s, blockType: null }; this.s.openTry = true; return { convertedLine: `${i}TRY`, blockType: "try" }; }
   private exceptb(s: string, i: string) { if (!s.startsWith("except")) return { convertedLine: s, blockType: null }; const m = s.match(/^except(?:\s+(\w+))?\s*:/); return { convertedLine: `${i}CATCH${m?.[1] ? " " + m[1] : ""}`, blockType: null }; }
-  private finallyb(s: string, i: string) { return s === "finally:" ? { convertedLine: `${i}FINALLY`, blockType: "finally" } : { convertedLine: s, blockType: null }; }
   private ret(s: string, i: string) { return s.startsWith("return") ? { convertedLine: `${i}RETURN${s.slice(6).trim() ? " " + s.slice(6).trim() : ""}`, blockType: null } : { convertedLine: s, blockType: null }; }
   private print(s: string, i: string) { if (!/^print\(.*\)$/.test(s)) return { convertedLine: s, blockType: null }; return { convertedLine: `${i}OUTPUT ${s.slice(6, -1)}`, blockType: null }; }
   private input(s: string, i: string) { const m = s.match(/(\w+)\s*=\s*input/); return m ? { convertedLine: `${i}INPUT ${m[1]}`, blockType: null } : { convertedLine: s, blockType: null }; }

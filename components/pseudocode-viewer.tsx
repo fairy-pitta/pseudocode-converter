@@ -1,6 +1,6 @@
 "use client"
 
-import { MonacoPythonEditor } from "./monaco-python-editor"
+import { MonacoPythonEditor } from "./monaco-editor"
 
 interface PseudocodeViewerProps {
   value: string
@@ -12,7 +12,7 @@ export function PseudocodeViewer({ value }: PseudocodeViewerProps) {
     <div className="border rounded-lg overflow-hidden">
       <MonacoPythonEditor
         value={value}
-        onChange={() => {}} // 読み取り専用なので何もしない
+        onChange={() => {}}
         readOnly={true}
         language="plaintext"
         height="400px"

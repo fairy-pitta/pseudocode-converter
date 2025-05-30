@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { BookMarked, BookOpen, FileText, MessageSquare, Github } from "lucide-react"
+import { BookMarked, BookOpen, FileText, MessageCircleQuestion, } from "lucide-react"
+
 
 export function AppHeader() {
   return (
@@ -36,19 +37,11 @@ export function AppHeader() {
             </Button>
             <Button variant="ghost" asChild className="text-white hover:bg-gray-700 hover:text-white">
               <Link href="/contact">
-                <MessageSquare className="w-4 h-4 mr-2" />
+                <MessageCircleQuestion className="w-6 h-6 mr-2" />
                 Contact
               </Link>
             </Button>
           </nav>
-          <div className="flex items-center">
-            <Button variant="ghost" asChild className="text-white hover:bg-gray-700 hover:text-white">
-              <a href="https://github.com/your-repo/pseudocode-converter" target="_blank" rel="noopener noreferrer">
-                <Github className="w-5 h-5" />
-                <span className="sr-only">GitHub</span>
-              </a>
-            </Button>
-          </div>
         </div>
       </div>
     </header>

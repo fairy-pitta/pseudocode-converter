@@ -17,13 +17,11 @@ export function IBConversionRules() {
       <h3 className="text-lg font-semibold mb-4">
         🔹 IB Computer Science Official Pseudocode Conversion Rules
       </h3>
-
-      {/* Responsive 2-column on md, 3-column on lg */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <BasicSyntaxTable />
-        <ControlStructuresTable />
-        <OperatorsTable />
-        <EndKeywordsTable />
+      <div className="grid grid-cols-1 gap-6">
+        <div className="min-w-0"><BasicSyntaxTable /></div>
+        <div className="min-w-0"><ControlStructuresTable /></div>
+        <div className="min-w-0"><OperatorsTable /></div>
+        <div className="min-w-0"><EndKeywordsTable /></div>
       </div>
     </Card>
   )
@@ -69,7 +67,7 @@ function OperatorsTable() {
     { python: "and, or, not", pseudocode: "AND , OR , NOT" },
     { python: "== , !=", pseudocode: "= , ≠" },
     { python: "< , <= , > , >=", pseudocode: "< , ≤ , > , ≥" },
-    { python: "+= , -= , *= , /=", pseudocode: "← x + … 等 (拡張代入はフル式に展開)" },
+    { python: "+= , -= , *= , /=", pseudocode: "← x + … " },
   ]
 
   return (
@@ -80,7 +78,7 @@ function OperatorsTable() {
 function EndKeywordsTable() {
   const rules = [
     { python: "# end if", pseudocode: "END IF" },
-    { python: "# end for", pseudocode: "end loop  (END FOR も可)" },
+    { python: "# end for", pseudocode: "end loop / END FOR" },
     { python: "# end while", pseudocode: "END WHILE" },
     { python: "# end function", pseudocode: "END FUNCTION" },
     { python: "# end case", pseudocode: "END CASE" },
@@ -105,7 +103,7 @@ interface RuleTableProps {
 
 function RuleTable({ title, rules }: RuleTableProps) {
   return (
-    <div>
+    <div className="overflow-x-auto">
       <h4 className="font-medium mb-2">{title}</h4>
       <table className="w-full text-sm">
         <thead>

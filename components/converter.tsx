@@ -12,44 +12,60 @@ import {
   ChevronDown,
   Copy,
   RotateCcw,
-  ThumbsUp,
-  ThumbsDown,
-  Share2,
   X,
   Code2,
+  Check, 
 } from "lucide-react"
 import { MonacoEditorWrapper } from "./monaco-editor-wrapper"
 import { useToast } from "@/hooks/use-toast"
+import { useState } from "react" // 追加
 
 interface DeepLStyleConverterProps {
-  pythonCode: string
+  sourceCode: string
   pseudocode: string
+  sourceLanguage: "python" | "java"
   pseudocodeStandard: "ib" | "cambridge"
   isConverting: boolean
   onCodeChange: (code: string) => void
+  onLanguageChange: (language: "python" | "java") => void
   onStandardChange: (standard: "ib" | "cambridge") => void
   onConvert: () => void
   onClear: () => void
 }
 
 export function DeepLStyleConverter({
-  pythonCode,
+  sourceCode,
   pseudocode,
+  sourceLanguage,
   pseudocodeStandard,
   isConverting,
   onCodeChange,
+  onLanguageChange,
   onStandardChange,
   onConvert,
   onClear,
 }: DeepLStyleConverterProps) {
   const { toast } = useToast()
+  const [isCopied, setIsCopied] = useState(false) // 追加
 
   /* ------------------------- language label helpers ------------------------- */
-  const sourceLanguage = {
-    name: "Python",
-    icon: <Code2 className="w-5 h-5" />,
-    description: "Source Code",
+  const getSourceLanguageInfo = () => {
+    if (sourceLanguage === "python") {
+      return {
+        name: "Python",
+        icon: <Code2 className="w-5 h-5" />,
+        description: "Source Code",
+      }
+    } else {
+      return {
+        name: "Java",
+        icon: "☕",
+        description: "Source Code",
+      }
+    }
   }
+
+  const sourceLanguageInfo = getSourceLanguageInfo()
 
   const targetLanguage =
     pseudocodeStandard === "ib"
@@ -64,7 +80,10 @@ export function DeepLStyleConverter({
   const copyToClipboard = async (code: string) => {
     try {
       await navigator.clipboard.writeText(code)
+      setIsCopied(true)
       toast({ title: "Copied", description: "Code copied to clipboard" })
+      // 2秒後にアイコンを元に戻す
+      setTimeout(() => setIsCopied(false), 2000)
     } catch {
       toast({
         title: "Error",
@@ -81,7 +100,7 @@ export function DeepLStyleConverter({
       <div className="flex items-center justify-between p-4 border-b bg-gray-50">
         <Button
           onClick={onConvert}
-          disabled={isConverting || !pythonCode.trim()}
+          disabled={isConverting || !sourceCode.trim()}
           className="bg-blue-600 hover:bg-blue-700"
         >
           {isConverting ? "Converting…" : "Convert"}
@@ -92,30 +111,79 @@ export function DeepLStyleConverter({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
         {/* left (source) pane ------------------------------------------------ */}
         <div className="relative border rounded-lg overflow-hidden flex flex-col">
-          {/* header */}
-          <div className="flex items-center gap-2 p-3 border-b bg-gray-50">
-            {sourceLanguage.icon}
-            <div>
-              <div className="font-medium text-sm">{sourceLanguage.name}</div>
-              <div className="text-xs text-gray-500">
-                {sourceLanguage.description}
-              </div>
-            </div>
+          {/* header with language dropdown */}
+          <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="flex items-center gap-2 p-0 h-auto hover:bg-gray-100 rounded-md px-2 py-1"
+                >
+                  {typeof sourceLanguageInfo.icon === "string" ? (
+                    <span className="text-lg">{sourceLanguageInfo.icon}</span>
+                  ) : (
+                    sourceLanguageInfo.icon
+                  )}
+                  <div className="text-left">
+                    <div className="font-medium text-sm">
+                      {sourceLanguageInfo.name}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {sourceLanguageInfo.description}
+                    </div>
+                  </div>
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[200px] shadow-lg border">
+                {/* Python */}
+                <DropdownMenuItem
+                  onClick={() => onLanguageChange("python")}
+                  className={`flex items-center gap-2 w-full p-2 text-sm rounded-md ${
+                    sourceLanguage === "python"
+                      ? "bg-blue-50 text-blue-700"
+                      : "hover:bg-gray-100"
+                  }`}
+                >
+                  <Code2 className="w-5 h-5" />
+                  <div className="flex-1">
+                    <div className="font-medium">Python</div>
+                    <div className="text-xs text-gray-500">Source Code</div>
+                  </div>
+                </DropdownMenuItem>
+
+                {/* Java */}
+                <DropdownMenuItem
+                  onClick={() => onLanguageChange("java")}
+                  className={`flex items-center gap-2 w-full p-2 text-sm rounded-md ${
+                    sourceLanguage === "java"
+                      ? "bg-orange-50 text-orange-700"
+                      : "hover:bg-gray-100"
+                  }`}
+                >
+                  <span className="text-lg">☕</span>
+                  <div className="flex-1">
+                    <div className="font-medium">Java</div>
+                    <div className="text-xs text-gray-500">Source Code</div>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* monaco editor */}
           <div className="flex-1 min-h-[400px]">
             <MonacoEditorWrapper
-              value={pythonCode}
+              value={sourceCode}
               onChange={onCodeChange}
-              language="python"
+              language={sourceLanguage}
               height="100%"
             />
           </div>
 
           {/* action bar */}
           <div className="absolute bottom-3 left-3 right-3 flex items-center justify-end gap-2 bg-white/80 backdrop-blur-sm rounded px-2 py-1">
-            {pythonCode && (
+            {sourceCode && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -214,22 +282,17 @@ export function DeepLStyleConverter({
           <div className="absolute bottom-3 left-3 right-3 flex items-center justify-end gap-2">
             {pseudocode && (
               <>
-                <Button variant="ghost" size="sm" className="p-2 h-8 w-8">
-                  <ThumbsUp className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm" className="p-2 h-8 w-8">
-                  <ThumbsDown className="w-4 h-4" />
-                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => copyToClipboard(pseudocode)}
                   className="p-2 h-8 w-8"
                 >
-                  <Copy className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm" className="p-2 h-8 w-8">
-                  <Share2 className="w-4 h-4" />
+                  {isCopied ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
                 </Button>
               </>
             )}
