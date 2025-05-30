@@ -18,7 +18,10 @@ import {
 } from "lucide-react"
 import { MonacoEditorWrapper } from "./monaco-editor-wrapper"
 import { useToast } from "@/hooks/use-toast"
-import { useState } from "react" // 追加
+import { useState } from 'react';
+import UnsupportedSyntaxPopup from './unsupported-syntax-popup';
+import { Java2IB } from '@/lib/java-to-pseudocode-parser-ib';
+import { Java2IG } from '@/lib/java-to-pseudocode-parser-igsce';
 
 interface DeepLStyleConverterProps {
   sourceCode: string
@@ -302,3 +305,54 @@ export function DeepLStyleConverter({
     </div>
   )
 }
+
+const Converter = () => {
+  const [showUnsupportedPopup, setShowUnsupportedPopup] = useState(false);
+  const [unsupportedSyntax, setUnsupportedSyntax] = useState<{
+    type: string;
+    code: string;
+    line?: number;
+  } | null>(null);
+
+  const handleUnsupportedSyntax = (syntaxType: string, originalCode: string, lineNumber?: number) => {
+    setUnsupportedSyntax({
+      type: syntaxType,
+      code: originalCode,
+      line: lineNumber
+    });
+    setShowUnsupportedPopup(true);
+  };
+
+  const convertCode = (sourceCode: string, parserType: 'ib' | 'igsce') => {
+    const options = { onUnsupportedSyntax: handleUnsupportedSyntax };
+    
+    if (parserType === 'ib') {
+      const parser = new Java2IB(options);
+      return parser.parse(sourceCode);
+    } else {
+      const parser = new Java2IG(options);
+      return parser.parse(sourceCode);
+    }
+  };
+
+  return (
+    <div>
+      {/* Your existing converter UI */}
+      
+      <UnsupportedSyntaxPopup
+        isOpen={showUnsupportedPopup}
+        onClose={() => setShowUnsupportedPopup(false)}
+        syntaxType={unsupportedSyntax?.type || ''}
+        originalCode={unsupportedSyntax?.code || ''}
+        lineNumber={unsupportedSyntax?.line}
+        suggestions={[
+          "Please convert this syntax manually to pseudocode",
+          "Try using a similar supported syntax pattern",
+          "Check the documentation for supported syntax"
+        ]}
+      />
+    </div>
+  );
+};
+
+export default Converter;

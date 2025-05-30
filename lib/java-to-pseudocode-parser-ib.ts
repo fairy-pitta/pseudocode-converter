@@ -1,197 +1,302 @@
-export type Block = "function"|"class"|"if"|"elif"|"else"|"for"|"while"|"repeat"|"try"|"finally";
-export interface ParseResult{code:string;block:Block|null}
-interface Frame{type:Block;ident?:string}
-interface St{ind:number[];stack:Frame[];out:string[]}
+export type Block =
+  | "function"
+  | "procedure"
+  | "class"
+  | "if"
+  | "elif"
+  | "else"
+  | "for"
+  | "while"
+  | "repeat"
+  | "try"
+  | "catch"
+  | "finally";
 
-const IND=4,ARW="←",OP={EQ:"=",NE:"≠",LE:"≤",GE:"≥",AND:"AND",OR:"OR",NOT:"NOT",DIV:"div",MOD:"mod"},CMP=[["+=","+"],["-=","-"],["*=","*"],["/=","/"],["%=",OP.MOD]] as const;
+export interface ParseResult {
+  code: string;
+  block: Block | null;
+  changed: boolean; // true if this converter handled the line
+}
+
+interface Frame {
+  type: Block;
+  ident?: string;
+}
+
+interface St {
+  ind: number[];       // indentation stack
+  stack: Frame[];      // open blocks
+  out: string[];       // output lines
+}
+
+const IND = 4,
+  ARW = "←",
+  OP = {
+    EQ: "=",
+    NE: "≠",
+    LE: "≤",
+    GE: "≥",
+    AND: "AND",
+    OR: "OR",
+    NOT: "NOT",
+    DIV: "DIV",
+    MOD: "MOD",
+    POW: "^",
+  } as const,
+  CMP = [
+    ["+=", "+"],
+    ["-=", "-"],
+    ["*=", "*"],
+    ["/=", "/"],
+    ["%=" , OP.MOD],
+  ] as const;
+
+type UnsupportedSyntaxCallback = (
+  kind: string,
+  text: string,
+  line: number,
+) => void;
 
 export class Java2IB {
-    private st!:St;
-    
-    parse(src:string){
-        if(!src.trim())return"";
-        this.st={ind:[0],stack:[],out:[]};
-        src.split(/\r?\n/).forEach(l=>this.line(l));
-        while(this.st.stack.length)this.end();
-        return this.st.out.join("\n")
+  private st!: St;
+  private onUnsupportedSyntax?: UnsupportedSyntaxCallback;
+  private currentLineNumber = 0;
+
+  constructor(opts?: { onUnsupportedSyntax?: UnsupportedSyntaxCallback }) {
+    this.onUnsupportedSyntax = opts?.onUnsupportedSyntax;
+  }
+
+  parse(src: string): string {
+    if (!src.trim()) return "";
+    this.st = { ind: [0], stack: [], out: [] };
+
+    src.split(/\r?\n/).forEach((raw, idx) => {
+      this.currentLineNumber = idx + 1;
+      this.processLine(raw);
+    });
+
+    // close remaining
+    while (this.st.stack.length) this.endBlock();
+
+    return this.st.out.join("\n");
+  }
+
+  private processLine(raw: string): void {
+    const trimmed = raw.trim();
+    if (!trimmed) { this.st.out.push(""); return; }
+    if (trimmed.startsWith("//")) { this.st.out.push(raw); return; }
+
+    const ws = this.leadingWhitespace(raw);
+    const curIndent = ws.length;
+    while (this.st.ind.length > 1 && curIndent < this.st.ind.at(-1)!) this.endBlock();
+    if (curIndent > this.st.ind.at(-1)!) this.st.ind.push(curIndent);
+    const pad = " ".repeat((this.st.ind.length - 1) * IND);
+
+    const { code, block } = this.dispatch(trimmed, pad);
+    if (code) this.st.out.push(code);
+    if (block) {
+      const ident = block === 'for' ? this.extractLoopVar(trimmed) : undefined;
+      this.st.stack.push({ type: block, ident });
     }
-    
-    /* ─ helpers ─ */
-    private ws(r:string){return r.match(/^(\s*)/)?.[1]||""}
-    private ind(r:string){return this.ws(r).length}
-    private push(b:Frame){this.st.stack.push(b)}
-    private end(){
-        this.st.ind.pop();
-        const f=this.st.stack.pop();
-        if(!f || !f.type) return;
-        const pad=" ".repeat((this.st.ind.length-1)*IND);
-        const end={function:"END FUNCTION",class:"END CLASS",if:"END IF",elif:"END IF",else:"END IF",for:"end loop",while:"END WHILE",repeat:"end loop",try:"END TRY",finally:"END TRY"}[f.type];
-        this.st.out.push(pad+end)
+  }
+
+  private endBlock(): void {
+    this.st.ind.pop();
+    const f = this.st.stack.pop();
+    if (!f) return;
+    const pad = " ".repeat((this.st.ind.length - 1) * IND);
+    const ends: Record<Block,string> = {
+      function: "END FUNCTION",
+      procedure: "END PROCEDURE",
+      class: "END CLASS",
+      if: "END IF",
+      elif: "END IF",
+      else: "END IF",
+      for: "END FOR",
+      while: "END WHILE",
+      repeat: "END REPEAT",
+      try: "END TRY",
+      catch: "END TRY",
+      finally: "END TRY",
+    };
+    this.st.out.push(pad + ends[f.type]);
+  }
+
+  private leadingWhitespace(s: string): string {
+    return s.match(/^(\s*)/)?.[1] ?? "";
+  }
+
+  private extractLoopVar(s: string): string {
+    const m = s.match(/for\s*\(.*?(\w+)\+\+/);
+    return m ? m[1] : '';
+  }
+
+  private cond(expr: string): string {
+    return expr
+      .replace(/==/g, OP.EQ)
+      .replace(/!=/g, OP.NE)
+      .replace(/<=/g, OP.LE)
+      .replace(/>=/g, OP.GE)
+      .replace(/&&/g, ` ${OP.AND} `)
+      .replace(/\|\|/g, ` ${OP.OR} `)
+      .replace(/!([A-Za-z_\(])/g, `${OP.NOT} $1`)
+      .replace(/\btrue\b/gi, "TRUE")
+      .replace(/\bfalse\b/gi, "FALSE")
+      .replace(/Math\.pow\(([^,]+),\s*([^\)]+)\)/g, "$1 ^ $2");
+  }
+
+  private dispatch(s: string, pad: string): ParseResult {
+    const convs = [
+      this.cls,
+      this.methodDecl,
+      this.ifBlock,
+      this.elifBlock,
+      this.elseBlock,
+      this.forCount,
+      this.forEach,
+      this.whileBlock,
+      this.doWhileBlock,
+      this.tryBlock,
+      this.catchBlock,
+      this.finallyBlock,
+      this.returnStmt,
+      this.printStmt,
+      this.inputStmt,
+      this.constDecl,
+      this.varDecl,
+      this.arrayDecl,
+      this.mathExpr,
+      this.compAssign,
+      this.assignStmt,
+    ] as const;
+    for (const fn of convs) {
+      const res = fn.call(this, s, pad);
+      if (res.changed) return res;
     }
-    
-    /* ─ per‑line ─ */
-    private line(raw:string){
-        const t=raw.trim();
-        if(!t){this.st.out.push("");return}
-        if(t.startsWith("//")){this.st.out.push(raw);return}
-        const cur=this.ind(raw);
-        while(this.st.ind.length>1&&cur<this.st.ind.at(-1)!)this.end();
-        if(cur>this.st.ind.at(-1)!)this.st.ind.push(cur);
-        const pad=" ".repeat((this.st.ind.length-1)*IND);
-        const r=this.conv(t,pad);
-        this.st.out.push(r.code);
-        if(r.block)this.push({type:r.block,ident:/for/.test(r.block)?this.lastVar(t):undefined})
+    if (s === '{' || s === '}') return { code:'', block:null, changed:true };
+    this.onUnsupportedSyntax?.('Java', s, this.currentLineNumber);
+    return { code: `${pad}// Unsupported: ${s}`, block:null, changed:true };
+  }
+
+  private ok(code:string, block:Block|null):ParseResult { return { code, block, changed:true }}
+  private ng():ParseResult { return { code:'', block:null, changed:false }}
+
+  private cls(s:string, i:string):ParseResult {
+    const m = s.match(/^(?:public\s+)?class\s+(\w+)/);
+    return m ? this.ok(`${i}CLASS ${m[1]}`, 'class') : this.ng();
+  }
+
+  private methodDecl(s:string,i:string):ParseResult {
+    const m = s.match(/^(?:public|private)?\s*(static\s+)?(void|int|double|boolean|String|float|long|byte|char)\s+(\w+)\(([^)]*)\)\s*\{/);
+    if (!m) return this.ng();
+    const isVoid = m[2] === 'void';
+    const keyword = isVoid ? 'PROCEDURE' : 'FUNCTION';
+    return this.ok(`${i}${keyword} ${m[3]}(${m[4]})`, isVoid ? 'procedure' : 'function');
+  }
+
+  private ifBlock(s:string,i:string):ParseResult {
+    const m = s.match(/^if\s*\((.+)\)\s*\{/);
+    return m ? this.ok(`${i}IF ${this.cond(m[1])} THEN`, 'if') : this.ng();
+  }
+  private elifBlock(s:string,i:string):ParseResult {
+    const m = s.match(/^else\s+if\s*\((.+)\)\s*\{/);
+    return m ? this.ok(`${i}ELSE IF ${this.cond(m[1])} THEN`, 'elif') : this.ng();
+  }
+  private elseBlock(s:string,i:string):ParseResult {
+    return /^else\s*\{/.test(s) ? this.ok(`${i}ELSE`, 'else') : this.ng();
+  }
+
+  private forCount(s:string,i:string):ParseResult {
+    const m = s.match(/^for\s*\((?:int|long|byte)\s+(\w+)\s*=\s*(\d+)\s*;\s*\1\s*(<|<=)\s*(\d+)\s*;\s*\1\+\+\)\s*\{/);
+    if (!m) return this.ng();
+    const start = +m[2];
+    const end = m[3]==='<=' ? +m[4] : +m[4]-1;
+    return this.ok(`${i}FOR ${m[1]} FROM ${start} TO ${end} DO`, 'for');
+  }
+
+  private forEach(s:string,i:string):ParseResult {
+    const m = s.match(/^for\s*\((\w+)\s*:\s*(\w+)\)\s*\{/);
+    return m ? this.ok(`${i}FOR EACH ${m[1]} IN ${m[2]} DO`, 'for') : this.ng();
+  }
+
+  private whileBlock(s:string,i:string):ParseResult {
+    const m = s.match(/^while\s*\((.+)\)\s*\{/);
+    return m ? this.ok(`${i}WHILE ${this.cond(m[1])} DO`, 'while') : this.ng();
+  }
+
+  private doWhileBlock(s:string,i:string):ParseResult {
+    return /^do\s*\{/.test(s) ? this.ok(`${i}REPEAT`, 'repeat') : this.ng();
+  }
+
+  private tryBlock(s:string,i:string):ParseResult {
+    return /^try\s*\{/.test(s)? this.ok(`${i}TRY`, 'try') : this.ng();
+  }
+
+  private catchBlock(s:string,i:string):ParseResult {
+    const m = s.match(/^catch\s*\(([^\s]+)\s+(\w+)\)\s*\{/);
+    return m ? this.ok(`${i}CATCH ${m[2]}`, 'catch') : this.ng();
+  }
+
+  private finallyBlock(s:string,i:string):ParseResult {
+    return /^finally\s*\{/.test(s)? this.ok(`${i}FINALLY`, 'finally') : this.ng();
+  }
+
+  private returnStmt(s:string,i:string):ParseResult {
+    const m = s.match(/^return\s*(.*);/);
+    return m ? this.ok(`${i}RETURN${m[1]? ' '+m[1] : ''}`, null) : this.ng();
+  }
+
+  private printStmt(s:string,i:string):ParseResult {
+    const m = s.match(/^System\.out\.(?:println|print)\((.*?)\);?$/);
+    return m ? this.ok(`${i}OUTPUT ${m[1]}`, null) : this.ng();
+  }
+
+  private inputStmt(s:string,i:string):ParseResult {
+    const m = s.match(/^(\w+)\s*=\s*(\w+)\.(nextInt|nextDouble|nextLine|nextBoolean|nextFloat|nextLong|nextByte)\(\);/);
+    if (!m) return this.ng();
+    return this.ok(`${i}INPUT ${m[1]}`, null);
+  }
+
+  private constDecl(s:string,i:string):ParseResult {
+    const m = s.match(/^final\s+(?:int|double|boolean|String|float|char|long|byte)\s+(\w+)\s*=\s*([^;]+);/);
+    return m ? this.ok(`${i}CONSTANT ${m[1]} ${ARW} ${m[2]}`, null) : this.ng();
+  }
+
+  private varDecl(s:string,i:string):ParseResult {
+    const m = s.match(/^(?:int|double|boolean|String|float|char|long|byte)\s+(\w+)(?:\s*=\s*([^;]+))?;/);
+    return m ? this.ok(`${i}DECLAR E ${m[1]}${m[2]? ` ${ARW} ${m[2]}` : ''}`, null) : this.ng();
+  }
+
+  private arrayDecl(s:string,i:string):ParseResult {
+    const lit = s.match(/^([\w<>]+)\[\]\s+(\w+)\s*=\s*\{([^}]*)\};/);
+    if (lit) return this.ok(`${i}DECLARE ${lit[2]} ${ARW} [${lit[3]}]`, null);
+    const sized = s.match(/^([\w<>]+)\[\]\s+(\w+)\s*=\s*new\s+\1\[(\d+)\];/);
+    if (sized) return this.ok(`${i}DECLARE ${sized[2]} : ARRAY[${sized[3]}] OF ${sized[1].toUpperCase()}`, null);
+    return this.ng();
+  }
+
+  private mathExpr(s:string,i:string):ParseResult {
+    let r = s
+      .replace(/Math\.sqrt\(([^)]+)\)/g, "√($1)")
+      .replace(/Math\.abs\(([^)]+)\)/g, "ABS($1)")
+      .replace(/Math\.max\(([^,]+),\s*([^)]+)\)/g, "MAX($1, $2)")
+      .replace(/Math\.min\(([^,]+),\s*([^)]+)\)/g, "MIN($1, $2)")
+      .replace(/Math\.pow\(([^,]+),\s*([^\)]+)\)/g, "$1 ^ $2");
+    if (r === s) return this.ng();
+    const m = r.match(/^(\w+)\s*=\s*(.+);/);
+    return m ? this.ok(`${i}${m[1]} ${ARW} ${m[2]}`, null) : this.ok(`${i}${r}`, null);
+  }
+
+  private compAssign(s:string,i:string):ParseResult {
+    for (const [op, sym] of CMP) if (s.includes(op)) {
+      const [l,r] = s.split(op);
+      return this.ok(`${i}${l.trim()} ${ARW} ${l.trim()} ${sym} ${r.replace(/;$/,'').trim()}`, null);
     }
-    
-    /* ─ converters ─ */
-    private conv(s:string,i:string):ParseResult{
-        // Handle closing braces
-        if(s === '}') return {code:'',block:null};
-        
-        const a=[this.cls,this.meth,this.ifb,this.elif,this.els,this.forCnt,this.forEach,this.whileb,this.dob,this.tryb,this.catchb,this.finallyb,this.ret,this.print,this.input,this.varDecl,this.arrayDecl,this.finalVarDecl,this.scannerInput,this.mathFunc,this.comp,this.asg];
-        for(const f of a){
-            const r=f.call(this,s,i);
-            if(r.code!==s)return r
-        }
-        return{code:`${i}// TODO ${s}`,block:null}
-    }
-    
-    private cls(s:string,i:string){
-        const m=s.match(/^(public\s+)?class\s+(\w+)/);
-        return m?{code:`${i}CLASS ${m[2]}`,block:"class" as Block}:{code:s,block:null}
-    }
-    
-    private meth(s:string,i:string){
-        const m=s.match(/^(public|private)?\s*(static)?\s*(void|int|double|boolean|String|long|byte|char|float)\s+(\w+)\(([^)]*)\)\s*\{/);
-        return m?{code:`${i}FUNCTION ${m[4]}(${m[5]})`,block:"function" as Block}:{code:s,block:null}
-    }
-    
-    private ifb(s:string,i:string){
-        const m=s.match(/^if\s*\((.+)\)\s*\{/);
-        return m?{code:`${i}IF ${this.cond(m[1])} THEN`,block:"if" as Block}:{code:s,block:null}
-    }
-    
-    private elif(s:string,i:string){
-        const m=s.match(/^else if\s*\((.+)\)\s*\{/);
-        return m?{code:`${i}ELSE IF ${this.cond(m[1])} THEN`,block:"elif" as Block}:{code:s,block:null}
-    }
-    
-    private els(s:string,i:string){
-        return/^else\s*\{/.test(s)?{code:`${i}ELSE`,block:"else" as Block}:{code:s,block:null}
-    }
-    
-    private forCnt(s:string,i:string){
-        const m=s.match(/^for\s*\((int|long|byte)\s+(\w+)\s*=\s*(\d+)\s*;\s*\2\s*<\s*(\d+)\s*;\s*\2\+\+\)\s*\{/);
-        if(!m)return{code:s,block:null};
-        return{code:`${i}loop ${m[2]} from ${m[3]} to ${(+m[4])-1}`,block:"for" as Block}
-    }
-    
-    private forEach(s:string,i:string){
-        const m=s.match(/^for\s*\((\w+)\s*:\s*(\w+)\)\s*\{/);
-        return m?{code:`${i}FOR EACH ${m[1]} IN ${m[2]}`,block:"for" as Block}:{code:s,block:null}
-    }
-    
-    private whileb(s:string,i:string){
-        const m=s.match(/^while\s*\((.+)\)\s*\{/);
-        return m?{code:`${i}WHILE ${this.cond(m[1])} DO`,block:"while" as Block}:{code:s,block:null}
-    }
-    
-    private dob(s:string,i:string){
-        return/^do\s*\{/.test(s)?{code:`${i}REPEAT`,block:"repeat" as Block}:{code:s,block:null}
-    }
-    
-    private tryb(s:string,i:string){
-        return s==="try{"?{code:`${i}TRY`,block:"try" as Block}:{code:s,block:null}
-    }
-    
-    private catchb(s:string,i:string){
-        const m=s.match(/^catch\s*\(([^)]*)\)\s*\{/);
-        return m?{code:`${i}CATCH ${m[1].split(" ").at(-1)}`,block:null}:{code:s,block:null}
-    }
-    
-    private finallyb(s:string,i:string){
-        return/^finally\s*\{/.test(s)?{code:`${i}FINALLY`,block:"finally" as Block}:{code:s,block:null}
-    }
-    
-    private ret(s:string,i:string){
-        const m=s.match(/^return\s*(.*);/);
-        return m?{code:`${i}RETURN${m[1]?" "+m[1]:""}`,block:null}:{code:s,block:null}
-    }
-    
-    private print(s:string,i:string){
-        const m=s.match(/^System\.out\.println\((.*?)\);?$/);
-        return m?{code:`${i}OUTPUT ${m[1]}`,block:null}:{code:s,block:null}
-    }
-    
-    private input(s:string,i:string){
-        const m=s.match(/^(\w+)\s*=\s*sc\.next.*?\(\);/);
-        return m?{code:`${i}INPUT ${m[1]}`,block:null}:{code:s,block:null}
-    }
-    
-    private varDecl(s:string,i:string){
-        const m=s.match(/^(int|double|boolean|String|float|char|long|byte)\s+(\w+)\s*=\s*([^;]+);/);
-        return m?{code:`${i}${m[2]} ${ARW} ${m[3]}`,block:null}:{code:s,block:null}
-    }
-    
-    private arrayDecl(s:string,i:string){
-        const m1=s.match(/^(int|double|boolean|String|float|char|long|byte)\[\]\s+(\w+)\s*=\s*\{([^}]*)\};/);
-        if(m1)return{code:`${i}${m1[2]} ${ARW} [${m1[3]}]`,block:null};
-        
-        const m2=s.match(/^(int|double|boolean|String|float|char|long|byte)\[\]\s+(\w+)\s*=\s*new\s+\1\[(\d+)\];/);
-        if(m2)return{code:`${i}${m2[2]} ${ARW} ARRAY[${m2[3]}] OF ${m2[1].toUpperCase()}`,block:null};
-        
-        return{code:s,block:null}
-    }
-    
-    private finalVarDecl(s:string,i:string){
-        const m=s.match(/^final\s+(int|double|boolean|String|float|char|long|byte)\s+(\w+)\s*=\s*([^;]+);/);
-        return m?{code:`${i}CONSTANT ${m[2]} ${ARW} ${m[3]}`,block:null}:{code:s,block:null}
-    }
-    
-    private scannerInput(s:string,i:string){
-        const m=s.match(/^(\w+)\s*=\s*(\w+)\.(nextInt|nextDouble|nextLine|nextBoolean|nextFloat|nextLong|nextByte)\(\);/);
-        if(m){
-            const inputType={nextInt:"INTEGER",nextDouble:"REAL",nextLine:"STRING",nextBoolean:"BOOLEAN",nextFloat:"REAL",nextLong:"INTEGER",nextByte:"INTEGER"}[m[3]]||"";
-            return{code:`${i}INPUT ${m[1]} // ${inputType}`,block:null}
-        }
-        return{code:s,block:null}
-    }
-    
-    private mathFunc(s:string,i:string){
-        let result=s;
-        result=result.replace(/Math\.sqrt\(([^)]+)\)/g,'√($1)');
-        result=result.replace(/Math\.max\(([^,]+),\s*([^)]+)\)/g,'MAX($1, $2)');
-        result=result.replace(/Math\.min\(([^,]+),\s*([^)]+)\)/g,'MIN($1, $2)');
-        result=result.replace(/Math\.abs\(([^)]+)\)/g,'ABS($1)');
-        result=result.replace(/Math\.pow\(([^,]+),\s*([^)]+)\)/g,'$1 ^ $2');
-        
-        if(result!==s){
-            const m=result.match(/^(\w+)\s*=\s*(.+);/);
-            return m?{code:`${i}${m[1]} ${ARW} ${m[2]}`,block:null}:{code:`${i}${result}`,block:null}
-        }
-        return{code:s,block:null}
-    }
-    
-    private comp(s:string,i:string){
-        for(const[q,sy]of CMP)if(s.includes(q)){
-            const[l,r]=s.split(q);
-            return{code:`${i}${l.trim()} ${ARW} ${l.trim()} ${sy} ${r.replace(/;$/,"").trim()}`,block:null}
-        }
-        return{code:s,block:null}
-    }
-    
-    private asg(s:string,i:string){
-        const m=s.match(/^([A-Za-z_]\w*)\s*=\s*([^=].*);/);
-        return m?{code:`${i}${m[1]} ${ARW} ${m[2].trim()}`,block:null}:{code:s,block:null}
-    }
-    
-    /* ─ util ─ */
-    private cond(x:string){
-        return x.replace(/==/g,OP.EQ).replace(/!=/g,OP.NE).replace(/<=/g,OP.LE).replace(/>=/g,OP.GE).replace(/&&/g,` ${OP.AND} `).replace(/\|\|/g,` ${OP.OR} `).replace(/!([A-Za-z_\(])/g,`${OP.NOT} $1`).replace(/true/gi,"TRUE").replace(/false/gi,"FALSE").replace(/\bMath\.pow\(([^,]+),\s*([^\)]+)\)/g,"$1 ^ $2")
-    }
-    
-    private lastVar(s:string){
-        const m=s.match(/(\w+)\+\+/);
-        return m?m[1]:""
-    }
+    return this.ng();
+  }
+
+  private assignStmt(s:string,i:string):ParseResult {
+    const m = s.match(/^([A-Za-z_]\w*)\s*=\s*([^=].*);/);
+    return m ? this.ok(`${i}${m[1]} ${ARW} ${m[2].trim()}`, null) : this.ng();
+  }
 }
