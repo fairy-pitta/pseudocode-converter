@@ -7,4 +7,6 @@ module.exports = {
     'lib/**/*.ts',
     '!lib/**/*.d.ts',
   ],
+  watchman: false,
+  maxWorkers: 1,
 };
