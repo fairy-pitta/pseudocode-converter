@@ -53,3 +53,9 @@ export class CambridgePseudocodeParser {
   private ws(r:string){ return r.match(/^(\s*)/)?.[1]??"" }
   private ind(r:string){ return r.match(/^(\s*)/)?.[1].length??0 }
 }
+
+// Export function for tests
+export function pythonToIGCSEPseudocode(pythonCode: string): string {
+  const parser = new CambridgePseudocodeParser();
+  return parser.parse(pythonCode);
+}
