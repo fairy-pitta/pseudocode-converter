@@ -10,6 +10,8 @@ counter ← 5
 DECLARE name : STRING
 name ← "John"`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -17,6 +19,8 @@ name ← "John"`;
     const pythonCode = `PI = 3.14`;
     const expectedPseudocode = `CONSTANT PI = 3.14`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -32,6 +36,8 @@ y ← "hello"
 DECLARE z : BOOLEAN
 z ← TRUE`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -47,6 +53,8 @@ remainder ← x MOD y
 DECLARE quotient : INTEGER
 quotient ← x DIV y`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -56,6 +64,8 @@ quotient ← x DIV y`;
     const expectedPseudocode = `DECLARE greeting : STRING
 greeting ← "Hello" & " " & name`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -65,6 +75,8 @@ greeting ← "Hello" & " " & name`;
     const expectedPseudocode = `DECLARE result : BOOLEAN
 result ← a AND b OR NOT c`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -74,6 +86,8 @@ result ← a AND b OR NOT c`;
     const expectedPseudocode = `DECLARE result : BOOLEAN
 result ← x > y AND a ≤ b AND c ≠ d AND e = f`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -85,6 +99,8 @@ result ← x > y AND a ≤ b AND c ≠ d AND e = f`;
    OUTPUT "Pass"
 ENDIF`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -99,6 +115,8 @@ ELSE
    OUTPUT "Fail"
 ENDIF`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -119,6 +137,8 @@ ELSE
    ENDIF
 ENDIF`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -140,6 +160,8 @@ ELSE
    OUTPUT "y might be largest"
 ENDIF`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -151,6 +173,8 @@ ENDIF`;
    OUTPUT i
 NEXT i`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -161,6 +185,8 @@ NEXT i`;
    OUTPUT i
 NEXT i`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -171,6 +197,8 @@ NEXT i`;
    OUTPUT i
 NEXT i`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -181,6 +209,8 @@ NEXT i`;
    OUTPUT item
 NEXT item`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -192,6 +222,8 @@ NEXT item`;
    x ← x + 1
 ENDWHILE`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -204,6 +236,8 @@ ENDWHILE`;
    y ← y - 1
 ENDWHILE`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -215,6 +249,8 @@ ENDWHILE`;
    OUTPUT "Hello", name
 ENDPROCEDURE`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -225,6 +261,8 @@ ENDPROCEDURE`;
    RETURN x + y
 ENDFUNCTION`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -242,6 +280,8 @@ ENDFUNCTION`;
    ENDIF
 ENDFUNCTION`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -252,6 +292,8 @@ greet("John")`;
 result ← Add(5, 3)
 CALL Greet("John")`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -270,6 +312,8 @@ DECLARE first : INTEGER
 first ← numbers[0]
 numbers[1] ← 10`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -277,6 +321,8 @@ numbers[1] ← 10`;
     const pythonCode = `empty_list = []`;
     const expectedPseudocode = `DECLARE empty_list : ARRAY[0:0] OF INTEGER`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -287,6 +333,8 @@ mixed[0] ← "1"
 mixed[1] ← "hello"
 mixed[2] ← "TRUE"`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -299,6 +347,8 @@ INPUT name
 OUTPUT "Enter your age: "
 INPUT age`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -310,6 +360,8 @@ print(f"Hello {name}")`;
 OUTPUT "Your age is", age
 OUTPUT "Hello " & name`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -328,6 +380,8 @@ x ← 5  // Another comment
 DECLARE y : INTEGER
 y ← 10`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -345,6 +399,8 @@ ELSE
    OUTPUT "Error occurred"
 ENDIF`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -366,6 +422,8 @@ ENDIF
 OUTPUT "Cleanup"
 CLOSEFILE "data.txt"`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -389,6 +447,8 @@ CLOSEFILE "data.txt"`;
    ENDPROCEDURE
 ENDCLASS`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -402,6 +462,8 @@ ENDCLASS`;
    ENDPROCEDURE
 ENDCLASS`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -412,6 +474,8 @@ my_dog.speak()`;
 my_dog ← NEW Dog("Buddy")
 CALL my_dog.Speak()`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -427,6 +491,8 @@ WHILE NOT EOF("input.txt")
 ENDWHILE
 CLOSEFILE "input.txt"`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -439,6 +505,8 @@ WRITEFILE "output.txt", "Hello World"
 WRITEFILE "output.txt", number
 CLOSEFILE "output.txt"`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -462,6 +530,8 @@ CLOSEFILE "output.txt"`;
    OUTPUT i
 NEXT i`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -482,6 +552,8 @@ student.age ← 20
 OUTPUT student.name
 student.grade ← "A"`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -497,6 +569,8 @@ power ← x ^ 2
 DECLARE square_root : REAL
 square_root ← x ^ 0.5`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -515,6 +589,8 @@ x ← 10
 y ← 20
 z ← 30`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -529,6 +605,8 @@ ENDFUNCTION
 DECLARE result : INTEGER
 result ← Square(5)`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -543,6 +621,8 @@ FOR x ← 0 TO 4
    index ← index + 1
 NEXT x`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -561,6 +641,8 @@ length ← LENGTH(text)
 DECLARE first_char : STRING
 first_char ← MID(text, 0, 1)`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -576,6 +658,8 @@ is_empty ← FALSE
 DECLARE result : BOOLEAN
 result ← is_valid AND NOT is_empty`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 
@@ -590,6 +674,8 @@ result ← is_valid AND NOT is_empty`;
    NEXT j
 NEXT i`;
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Actual Pseudocode for nested if statements:');
+    console.log(result);
     expect(result).toBe(expectedPseudocode);
   });
 });

@@ -1,4 +1,4 @@
-import { OPERATORS, INDENT_SIZE } from './constants';
+import { OPERATORS, KEYWORDS, PYTHON_INDENT_SIZE, INDENT_SIZE } from './constants';
 import { ParserState } from './types';
 
 /**
@@ -45,10 +45,13 @@ export const getCurrentIndentation = (state: ParserState): string => {
  * @param line The code line.
  * @returns The number of leading spaces.
  */
-export const getLineIndentationLevel = (line: string): number => {
+export function getLineIndentationLevel(line: string): number {
   const match = line.match(/^(\s*)/);
-  return match ? match[1].length : 0;
-};
+  if (match) {
+    return match[1].length / PYTHON_INDENT_SIZE;
+  }
+  return 0;
+}
 
 /**
  * Extracts the leading whitespace from a line.

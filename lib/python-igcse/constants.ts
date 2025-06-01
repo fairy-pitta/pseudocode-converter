@@ -1,4 +1,5 @@
-export const INDENT_SIZE = 3;
+export const INDENT_SIZE = 2; // For pseudocode output
+export const PYTHON_INDENT_SIZE = 4; // Typical Python indent
 
 export const OPERATORS = {
   ASSIGN: '←',
@@ -63,7 +64,17 @@ export const BLOCK_TYPES = {
   ELSE: 'else',
   FOR: 'for',
   WHILE: 'while',
-  REPEAT: 'repeat',
+  REPEAT: 'repeat', // Added for REPEAT UNTIL loops
+  ENDIF: 'endif',
+  NEXT: 'next',
+  ENDWHILE: 'endwhile',
+  ENDFUNCTION: 'endfunction',
+  ENDCLASS: 'endclass',
+  RETURN: 'return',
+  TRY: 'try',
+  EXCEPT: 'except',
+  FINALLY: 'finally',
+  // Add other block types as needed
 } as const;
 
 export type BlockType = typeof BLOCK_TYPES[keyof typeof BLOCK_TYPES];
