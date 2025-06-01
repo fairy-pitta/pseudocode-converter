@@ -52,8 +52,9 @@ export const convertAssignment = (line: string, indentation: string, state: Pars
   let value = match[2].trim();
 
   // Handle input separately if it's part of the assignment
-  const inputMatch = value.match(/^input\((?:["'].*?["'])?\)/);
+  const inputMatch = value.match(/^(?:int\()?input\((["'].*?["'])?\)(?:\))?/);
   if (inputMatch) {
+    // For IGCSE pseudocode, we only use INPUT without the prompt
     return { 
       convertedLine: `${indentation}${KEYWORDS.INPUT} ${variable}`, 
       blockType: null 
@@ -64,7 +65,7 @@ export const convertAssignment = (line: string, indentation: string, state: Pars
   value = value.replace(/\.upper\(\)/g, '.UPPER()');
   value = value.replace(/\.lower\(\)/g, '.LOWER()');
   value = value.replace(/len\(/g, 'LENGTH(');
-  value = value.replace(/(\w+)\[(\d+)\]/g, 'MID($1, $2, 1)');
+  // value = value.replace(/(\w+)\[(\d+)\]/g, 'MID($1, $2, 1)'); // This line was causing incorrect conversion of list access
   
   // Handle function calls
   if (value.includes('(') && value.includes(')')) {
@@ -87,17 +88,10 @@ export const convertAssignment = (line: string, indentation: string, state: Pars
   
   value = convertConditionOperators(value);
   
-  // Check if this is the first time we see this variable
+  // For IGCSE, we don't pre-declare variables - they are used directly
+  // Track variables for potential future use
   if (!state.declarations.has(variable)) {
     state.declarations.add(variable);
-    
-    // Determine type based on value
-    const type = getVariableType(value, state);
-    
-    return { 
-      convertedLine: `${indentation}${KEYWORDS.DECLARE} ${variable} : ${type}\n${indentation}${variable} ${OPERATORS.ASSIGN} ${value}`, 
-      blockType: null 
-    };
   }
   
   return { 
@@ -134,8 +128,22 @@ export const convertPrint = (line: string, indentation: string, state: ParserSta
   const match = line.match(PATTERNS.PRINT);
   if (!match) return { convertedLine: line, blockType: null };
 
-  let content = match[1].trim();
-  
+  let rawContent = match[1].trim();
+
+  // First, handle potential f-strings within the raw content
+  // Regex to find f-strings like f"...{var}..." or f'...{var}...' 
+  rawContent = rawContent.replace(/f(["'])(.*?\{.*?}.*?)\1/g, (match, quote, fstringContent) => {
+    let result = '"' + fstringContent.replace(/\{([^}]+)\}/g, '" & $1 & "') + '"';
+    result = result.replace(/"" & /g, '').replace(/ & ""$/g, ''); // Clean up empty concatenations
+    return result;
+  });
+
+  // Split arguments by comma, trim, and rejoin with ', '
+  // This needs to be careful about commas inside strings or function calls
+  // For simplicity, we'll assume top-level commas separate print arguments
+  const args = rawContent.split(',').map(arg => arg.trim());
+  let content = args.join(', ');
+
   // Convert dictionary access to dot notation
   content = content.replace(PATTERNS.DICTIONARY_ACCESS, (match, variable, key) => {
     const cleanKey = key.replace(/["']/g, '');
@@ -168,9 +176,7 @@ export const convertListComprehension = (line: string, indentation: string, stat
   const [, arrayName, expression, loopVar, rangeEnd] = match;
   const endValue = (parseInt(rangeEnd) - 1).toString();
   
-  // Declare the array and index variable
-  const arrayDeclaration = `${indentation}${KEYWORDS.DECLARE} ${arrayName} : ARRAY[0:${endValue}] OF INTEGER`;
-  const indexDeclaration = `${indentation}${KEYWORDS.DECLARE} index : INTEGER`;
+  // Initialize index variable
   const indexInit = `${indentation}index ${OPERATORS.ASSIGN} 0`;
   
   // Create the for loop
@@ -184,7 +190,7 @@ export const convertListComprehension = (line: string, indentation: string, stat
   state.declarations.add('index');
   state.declarations.add(loopVar);
   
-  const result = [arrayDeclaration, indexDeclaration, indexInit, forLoop, assignment, increment, endFor].join('\n');
+  const result = [indexInit, forLoop, assignment, increment, endFor].join('\n');
   
   return { 
     convertedLine: result, 
@@ -237,23 +243,15 @@ export const convertMultipleAssignment = (line: string, indentation: string, sta
   
   const result: string[] = [];
   
-  // Generate declarations and assignments
+  // Generate assignments
   for (let i = 0; i < varList.length; i++) {
     const variable = varList[i];
     const value = valueList[i] || '0'; // Default to 0 if no value
     
-    // Add declaration if not already declared
-    if (!state.declarations.has(variable)) {
-      const type = getVariableType(value, state);
-      result.push(`${indentation}${KEYWORDS.DECLARE} ${variable} : ${type}`);
-      state.declarations.add(variable);
-    }
-  }
-  
-  // Add assignments
-  for (let i = 0; i < varList.length; i++) {
-    const variable = varList[i];
-    const value = valueList[i] || '0';
+    // Mark variable as declared
+    state.declarations.add(variable);
+    
+    // Add assignment
     result.push(`${indentation}${variable} ${OPERATORS.ASSIGN} ${value}`);
   }
   
@@ -292,7 +290,7 @@ export const convertDictionaryLiteral = (line: string, indentation: string, stat
   Array.from(allFields).forEach(fieldKey => {
     // Use the type from current literal if available, otherwise default to STRING
     const fieldType = fieldTypes.get(fieldKey) || 'STRING';
-    typeLines.push(`${indentation}   DECLARE ${fieldKey} : ${fieldType}`);
+    typeLines.push(`${indentation}   ${fieldKey} : ${fieldType}`);
   });
   
   typeLines.push(`${indentation}ENDTYPE`);

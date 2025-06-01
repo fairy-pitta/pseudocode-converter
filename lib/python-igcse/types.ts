@@ -16,6 +16,8 @@ export interface ParserState {
   outputLines: string[];
   declarations: Set<string>;
   typeFields?: Map<string, Set<string>>;
+  isTryBlockOpen: boolean;
+  tryBlockIndentationString: string | null;
 }
 
-export type ConverterFunction = (line: string, indentation: string, state: ParserState) => ParseResult;
+export type ConverterFunction = (line: string, indentation: string, state: ParserState) => ParseResult | null;

@@ -95,6 +95,20 @@ export default function PythonToPseudocodePage() {
           onConvert={() => convertToPseudocode()}
           onClear={clearAll}
         />
+        
+        {/* Description for target audience */}
+        <div className="mt-4 text-center">
+          <p className="text-gray-600 text-sm max-w-2xl mx-auto italic">
+            This tool is designed for students and teachers who are comfortable writing code 
+            but may be unfamiliar with pseudocode conventions. Convert your Python or Java code 
+            into standardized pseudocode format for academic assignments and examinations.
+          </p>
+          <p className="text-gray-500 text-xs max-w-2xl mx-auto mt-2 italic">
+            If you encounter any bugs or unsupported code patterns, please report them via GitHub issues 
+            from my contact page, or reach out through my portfolio if you don't have a GitHub account. 
+            I'll address issues as quickly as possible.
+          </p>
+        </div>
       </div>
 
     </div>

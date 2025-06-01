@@ -22,12 +22,11 @@ export const convertElif = (line: string, indentation: string, state: ParserStat
   
   const condition = convertConditionOperators(match[1].trim());
   
-  // For IGCSE, ELIF should be converted to nested IF structure
-  // The ELSE has already been added by the parser, now we add the nested IF
-  const blockType: BlockFrame = { type: BLOCK_TYPES.IF };
+  // For IGCSE, ELIF should be converted to ELSE IF
+  const blockType: BlockFrame = { type: BLOCK_TYPES.ELIF };
   
   return { 
-    convertedLine: `${indentation}${KEYWORDS.IF} ${condition} ${KEYWORDS.THEN}`, 
+    convertedLine: `${indentation}${KEYWORDS.ELSE_IF} ${condition} ${KEYWORDS.THEN}`, 
     blockType 
   };
 };
@@ -99,8 +98,62 @@ export const convertWhile = (line: string, indentation: string, state: ParserSta
   const blockType: BlockFrame = { type: BLOCK_TYPES.WHILE };
   
   return { 
-    convertedLine: `${indentation}${KEYWORDS.WHILE} ${condition} ${KEYWORDS.DO}`, 
+    convertedLine: `${indentation}${KEYWORDS.WHILE} ${condition}`, 
     blockType 
+  };
+};
+
+export const convertBreak = (line: string, indentation: string, state: ParserState): ParseResult => {
+  if (!PATTERNS.BREAK.test(line)) return { convertedLine: line, blockType: null };
+  
+  // Find the current loop type to determine the correct break statement
+  const currentLoop = state.currentBlockTypes.slice().reverse().find(block => 
+    block.type === BLOCK_TYPES.FOR || block.type === BLOCK_TYPES.WHILE
+  );
+  
+  if (currentLoop?.type === BLOCK_TYPES.FOR) {
+    return {
+      convertedLine: `${indentation}EXIT FOR`,
+      blockType: null
+    };
+  } else if (currentLoop?.type === BLOCK_TYPES.WHILE) {
+    return {
+      convertedLine: `${indentation}EXIT WHILE`,
+      blockType: null
+    };
+  }
+  
+  // Fallback if no loop context found
+  return {
+    convertedLine: `${indentation}// break - exit loop`,
+    blockType: null
+  };
+};
+
+export const convertContinue = (line: string, indentation: string, state: ParserState): ParseResult => {
+  if (!PATTERNS.CONTINUE.test(line)) return { convertedLine: line, blockType: null };
+  
+  // Find the current loop type to determine the correct continue statement
+  const currentLoop = state.currentBlockTypes.slice().reverse().find(block => 
+    block.type === BLOCK_TYPES.FOR || block.type === BLOCK_TYPES.WHILE
+  );
+  
+  if (currentLoop?.type === BLOCK_TYPES.FOR) {
+    return {
+      convertedLine: `${indentation}NEXT ${currentLoop.ident || 'i'}`,
+      blockType: null
+    };
+  } else if (currentLoop?.type === BLOCK_TYPES.WHILE) {
+    return {
+      convertedLine: `${indentation}CONTINUE WHILE`,
+      blockType: null
+    };
+  }
+  
+  // Fallback if no loop context found
+  return {
+    convertedLine: `${indentation}// continue - skip to next iteration`,
+    blockType: null
   };
 };
 
@@ -111,4 +164,6 @@ export const controlFlowConverters = {
   convertForRange,
   convertForCollection,
   convertWhile,
+  convertBreak,
+  convertContinue,
 };

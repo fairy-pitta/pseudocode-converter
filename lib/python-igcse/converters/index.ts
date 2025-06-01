@@ -1,6 +1,8 @@
 import { controlFlowConverters } from './control-flow';
 import { declarationConverters } from './declarations';
 import { expressionConverters } from './expressions';
+import * as errorHandlingConverters from './error-handling';
+import * as listConverters from './lists';
 import { ConverterFunction } from '../types';
 
 export const ALL_CONVERTERS: ConverterFunction[] = [
@@ -13,6 +15,13 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
   controlFlowConverters.convertForRange,
   controlFlowConverters.convertForCollection,
   controlFlowConverters.convertWhile,
+  controlFlowConverters.convertBreak,
+  controlFlowConverters.convertContinue,
+  
+  // Error Handling
+  errorHandlingConverters.convertTry,
+  errorHandlingConverters.convertExcept,
+  errorHandlingConverters.convertFinally,
   
   // Declarations
   declarationConverters.convertFunctionDef,
@@ -27,6 +36,12 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
   expressionConverters.convertMultipleAssignment, // Before simple assignment
   expressionConverters.convertDictionaryLiteral, // Before simple assignment
   expressionConverters.convertDictionaryAssignment, // Before simple assignment
+  
+  // List operations - before general assignment
+  listConverters.convertListDeclaration,
+  listConverters.convertListAssignment,
+  listConverters.convertListAccess,
+  
   expressionConverters.convertCompoundAssignment, // Before simple assignment
   expressionConverters.convertAssignment,
 ];
@@ -34,3 +49,4 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
 export * from './control-flow';
 export * from './declarations';
 export * from './expressions';
+export * from './lists';

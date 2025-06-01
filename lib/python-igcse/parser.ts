@@ -37,6 +37,8 @@ export class IGCSEPseudocodeParser {
       currentBlockTypes: [],
       outputLines: [],
       declarations: new Set(),
+      isTryBlockOpen: false,
+      tryBlockIndentationString: null,
     };
   }
 
@@ -108,26 +110,57 @@ export class IGCSEPseudocodeParser {
     const currentIndentation = getLineIndentationLevel(line);
     console.log(`[processLine] currentIndentation for "${trimmed}": ${currentIndentation}`);
 
+    // Check if this line is ELIF or ELSE before closing blocks
+    const isElif = /^elif\s+.+:$/i.test(trimmed);
+    const isElse = /^else\s*:$/i.test(trimmed);
+    const skipBlockClosing = isElif || isElse;
+
     // 1. Close any blocks whose indentation level is greater than the current line's indentation.
     //    This must happen BEFORE processing the current line's block type, especially for ELSE/ELIF.
-    this.closeBlocksForIndentation(currentIndentation);
+    //    But skip for ELIF/ELSE to prevent premature END IF generation
+    this.closeBlocksForIndentation(currentIndentation, skipBlockClosing);
     console.log(`[processLine] After closeBlocksForIndentation. currentBlockTypes: ${JSON.stringify(this.state.currentBlockTypes)}, indentationLevels: ${JSON.stringify(this.state.indentationLevels)}`);
 
+    // Update indentationLevels based on Python's physical indentation
+    const lastStoredIndentationLevel = this.state.indentationLevels[this.state.indentationLevels.length - 1];
+    if (currentIndentation > lastStoredIndentationLevel) {
+        this.state.indentationLevels.push(currentIndentation);
+        console.log(`[processLine] Pushed new Python indentation level ${currentIndentation}. Stack: ${JSON.stringify(this.state.indentationLevels)}`);
+    }
+
     // 2. Determine an initial indentation string (this might be refined later)
+    // This initial indentation is less critical now as we recalculate precisely later,
+    // but converters might still use it as a hint.
     let initialPseudocodeIndentLevel = 0;
-    // Use indentationLevels *before* processing the current line's block structure
     if (this.state.indentationLevels.length > 0) { 
         initialPseudocodeIndentLevel = Math.max(0, this.state.indentationLevels.length - 1);
     }
     const initialIndentationString = ' '.repeat(initialPseudocodeIndentLevel * INDENT_SIZE);
-    // console.log(`[processLine] Initial indentationString: "${initialIndentationString}" (length ${initialIndentationString.length}), initialPseudocodeIndentLevel: ${initialPseudocodeIndentLevel}, initial indentationLevels: ${JSON.stringify(this.state.indentationLevels)}`);
 
-    // 3. Convert the Python line to pseudocode.
-    const conversionResult = this.convertLine(trimmed, initialIndentationString); // Pass initial indent, converters might use it
-    // console.log(`[processLine] Raw Converted line: "${conversionResult.convertedLine}", Original: "${trimmed}", BlockType from converter: ${conversionResult.blockType ? conversionResult.blockType.type : 'null'}`);
+    // 3. Handle inline comments (comments at the end of a line)
+    let lineToConvert = trimmed;
+    let inlineComment = '';
+    const commentIndex = trimmed.indexOf('#');
+    if (commentIndex > 0) {
+      const beforeComment = trimmed.substring(0, commentIndex);
+      const singleQuotes = (beforeComment.match(/'/g) || []).length;
+      const doubleQuotes = (beforeComment.match(/"/g) || []).length;
+      if (singleQuotes % 2 === 0 && doubleQuotes % 2 === 0) {
+        lineToConvert = beforeComment.trim();
+        inlineComment = '  // ' + trimmed.substring(commentIndex + 1).trim();
+      }
+    }
 
-    // 4. Manage the block type stack (currentBlockTypes) and indentation level stack (indentationLevels).
-    // This section updates this.state.indentationLevels based on conversionResult.blockType
+    // 4. Convert the Python line to pseudocode.
+    const conversionResult = this.convertLine(lineToConvert, initialIndentationString);
+    
+    if (conversionResult === null) {
+      console.log(`[processLine] Skipping line: "${trimmed}" (converter returned null)`);
+      return;
+    }
+    
+    // 5. Manage the block type stack (currentBlockTypes).
+    // IndentationLevels stack is now managed based on physical Python indent.
     if (conversionResult.blockType) {
         const newBlockType = conversionResult.blockType.type;
         console.log(`[processLine] Processing new blockType: ${newBlockType}`);
@@ -136,85 +169,33 @@ export class IGCSEPseudocodeParser {
             const lastBlockOnStack = this.state.currentBlockTypes.length > 0 ? this.state.currentBlockTypes[this.state.currentBlockTypes.length - 1] : null;
             if (lastBlockOnStack && (lastBlockOnStack.type === BLOCK_TYPES.IF || lastBlockOnStack.type === BLOCK_TYPES.ELIF)) {
                 console.log(`[processLine] ${newBlockType} is replacing ${lastBlockOnStack.type} on stack.`);
-                this.state.currentBlockTypes.pop(); // Remove the IF/ELIF.
-                this.state.currentBlockTypes.push(conversionResult.blockType); // Add the new ELSE/ELIF.
+                this.state.currentBlockTypes.pop();
+                this.state.currentBlockTypes.push(conversionResult.blockType);
             } else {
-                // This case can happen if an ELSE/ELIF appears without a preceding IF/ELIF at the same or higher indent level
-                // or if the preceding block was already closed by dedent.
                 console.warn(`[processLine] State Warning: Encountered ${newBlockType} but stack top is ${lastBlockOnStack ? lastBlockOnStack.type : 'empty'} or not IF/ELIF. Line: "${trimmed}". Pushing anyway.`);
                 this.state.currentBlockTypes.push(conversionResult.blockType);
             }
-            // ELSE/ELIF do not start a new indentation level themselves. They continue the parent IF's level.
-            // The indentationLevels stack should have been adjusted by closeBlocksForIndentation if currentIndentation changed.
         } else {
-            // For new blocks like IF, FOR, WHILE, FUNCTION, PROCEDURE, CLASS.
             this.state.currentBlockTypes.push(conversionResult.blockType);
             console.log(`[processLine] Pushed ${newBlockType} to currentBlockTypes. Stack: ${JSON.stringify(this.state.currentBlockTypes)}`);
-
-            // Only push to indentationLevels if this block type *starts* a new indent level
-            // AND the current line's indentation is actually greater than the previous level.
-            if (INDENTING_BLOCK_TYPES_LIST.includes(newBlockType)) {
-                const lastStoredIndentationLevel = this.state.indentationLevels[this.state.indentationLevels.length - 1];
-                if (currentIndentation > lastStoredIndentationLevel) {
-                    this.state.indentationLevels.push(currentIndentation);
-                    console.log(`[processLine] Pushed new indentation level ${currentIndentation}. Stack: ${JSON.stringify(this.state.indentationLevels)}`);
-                } else if (currentIndentation === lastStoredIndentationLevel) {
-                    // This handles cases like an IF at indent 0, then content at indent 0.
-                    // Or, if an IF is at indent N, and its content is also at indent N (which is unusual for Python but could happen).
-                    // We only push if the stack is at base [0] and currentIndentation > 0, meaning first actual indent.
-                    if (this.state.indentationLevels.length === 1 && lastStoredIndentationLevel === 0 && currentIndentation > 0) {
-                       this.state.indentationLevels.push(currentIndentation);
-                       console.log(`[processLine] Pushed initial indentation level ${currentIndentation} from base [0]. Stack: ${JSON.stringify(this.state.indentationLevels)}`);
-                    } else {
-                       console.log(`[processLine] New block ${newBlockType} at same or lesser indentation ${currentIndentation} as previous ${lastStoredIndentationLevel}. Not pushing to indentationLevels.`);
-                    }
-                } else {
-                     console.log(`[processLine] New block ${newBlockType} at lesser indentation ${currentIndentation} than previous ${lastStoredIndentationLevel}. Not pushing to indentationLevels (should have been handled by closeBlocksForIndentation).`);
-                }
-            }
+            // The INDENTING_BLOCK_TYPES_LIST check and associated indentationLevels.push
+            // is removed here as indentationLevels is now managed by physical Python indent.
         }
     }
-    // 5. Recalculate correct indentation based on *updated* indentationLevels and IGCSE rules
-    let correctPseudocodeIndentLevel = 0;
+
+    // 6. Recalculate correct indentation based on *updated* indentationLevels and IGCSE rules
     // currentPythonBlockDepth is 0 for top-level, 1 for first nesting, etc., based on *updated* indentationLevels
+    // which now correctly reflect Python's physical indentation structure.
     const currentPythonBlockDepth = Math.max(0, this.state.indentationLevels.length - 1);
-    const blockType = conversionResult.blockType ? conversionResult.blockType.type : null;
+    let correctPseudocodeIndentLevel = currentPythonBlockDepth;
 
-    if (blockType && 
-        (blockType === BLOCK_TYPES.IF || blockType === BLOCK_TYPES.FOR || blockType === BLOCK_TYPES.WHILE || blockType === BLOCK_TYPES.REPEAT ||
-         blockType === BLOCK_TYPES.FUNCTION || blockType === BLOCK_TYPES.PROCEDURE || blockType === BLOCK_TYPES.CLASS ||
-         blockType === BLOCK_TYPES.ELSE || blockType === BLOCK_TYPES.ELIF ||
-         blockType === BLOCK_TYPES.ENDIF || blockType === BLOCK_TYPES.NEXT || blockType === BLOCK_TYPES.ENDWHILE ||
-         blockType === BLOCK_TYPES.ENDFUNCTION || blockType === BLOCK_TYPES.ENDCLASS || blockType === BLOCK_TYPES.RETURN ||
-         blockType === BLOCK_TYPES.TRY || blockType === BLOCK_TYPES.EXCEPT || blockType === BLOCK_TYPES.FINALLY
-        )) {
-        correctPseudocodeIndentLevel = currentPythonBlockDepth;
-    } else { // Line inside a block or simple top-level statement
-        if (this.state.indentationLevels.length <= 1 && !blockType) { // Top-level simple statement (e.g. x = 1) or if indentationLevels is unexpectedly empty
-             correctPseudocodeIndentLevel = 0;
-        } else { // Line inside a block (e.g. OUTPUT, assignment inside IF)
-            // currentPythonBlockDepth is the depth of the *current* block itself.
-            // Lines *inside* this block should be indented one level further in pseudocode.
-            correctPseudocodeIndentLevel = currentPythonBlockDepth;
-            // For lines that are *not* new block declarations (IF, ELSE, etc.) but are *inside* a block,
-            // they need an additional indent level compared to their parent block's declaration line.
-            if (!blockType) { // e.g. OUTPUT "foo" inside an IF block
-                 correctPseudocodeIndentLevel = Math.max(0, this.state.indentationLevels.length -1) +1; // indent one more than the current block's declaration
-            } else if (blockType && 
-                !(blockType === BLOCK_TYPES.IF || blockType === BLOCK_TYPES.FOR || blockType === BLOCK_TYPES.WHILE ||
-                blockType === BLOCK_TYPES.FUNCTION || blockType === BLOCK_TYPES.PROCEDURE || blockType === BLOCK_TYPES.CLASS ||
-                blockType === BLOCK_TYPES.ELSE || blockType === BLOCK_TYPES.ELIF ||
-                blockType === BLOCK_TYPES.ENDIF || blockType === BLOCK_TYPES.NEXT || blockType === BLOCK_TYPES.ENDWHILE ||
-                blockType === BLOCK_TYPES.ENDFUNCTION || blockType === BLOCK_TYPES.ENDCLASS || blockType === BLOCK_TYPES.RETURN ||
-                blockType === BLOCK_TYPES.TRY || blockType === BLOCK_TYPES.EXCEPT || blockType === BLOCK_TYPES.FINALLY
-                )) {
-                // This case handles custom block types that might exist and are not structural keywords.
-                // Assume they behave like simple statements within the current block's indentation.
-                correctPseudocodeIndentLevel = Math.max(0, this.state.indentationLevels.length -1) +1;
-            }
-        }
-    }
-    correctPseudocodeIndentLevel = Math.max(0, correctPseudocodeIndentLevel);
+    // The pseudocode indent level directly corresponds to the Python block depth.
+    // Example: Python indent 0 -> Pseudocode indent 0
+    //          Python indent 4 (inside a block) -> Pseudocode indent 1
+    //          Python indent 8 (nested block) -> Pseudocode indent 2
+    // This simplification is possible because indentationLevels now accurately tracks Python's nesting.
+
+    correctPseudocodeIndentLevel = Math.max(0, correctPseudocodeIndentLevel); // Ensure non-negative
     const correctIndentationString = ' '.repeat(correctPseudocodeIndentLevel * INDENT_SIZE);
 
     // Remove initial indentation (if any) from conversionResult.convertedLine and prepend correctIndentationString
@@ -226,7 +207,7 @@ export class IGCSEPseudocodeParser {
         // This is a bit of a fallback.
         lineContent = lineContent.trimStart();
     }
-    const finalConvertedLine = correctIndentationString + lineContent;
+    const finalConvertedLine = correctIndentationString + lineContent + inlineComment;
     
     this.state.outputLines.push(finalConvertedLine);
 
@@ -237,7 +218,13 @@ export class IGCSEPseudocodeParser {
 
 
 
-  private closeBlocksForIndentation(currentIndentation: number): void {
+  private closeBlocksForIndentation(currentIndentation: number, skipForElif: boolean = false): void {
+    // Skip closing blocks if this is an ELIF/ELSE at the same level as the preceding IF
+    if (skipForElif) {
+      console.log('[closeBlocksForIndentation] Skipping block closure for ELIF/ELSE');
+      return;
+    }
+    
     while (
       this.state.indentationLevels.length > 1 &&
       currentIndentation < this.state.indentationLevels[this.state.indentationLevels.length - 1]
@@ -280,6 +267,13 @@ export class IGCSEPseudocodeParser {
     
     const closeKeyword = this.getCloseKeyword(blockFrame);
     this.state.outputLines.push(`${indentationString}${closeKeyword}`);
+    
+    // Reset try block state when closing TRY block
+    if (blockFrame.type === BLOCK_TYPES.TRY) {
+      this.state.isTryBlockOpen = false;
+      this.state.tryBlockIndentationString = null;
+    }
+    
     console.log(`[closeCurrentBlock] End. currentBlockTypes: ${JSON.stringify(this.state.currentBlockTypes)}, indentationLevels: ${JSON.stringify(this.state.indentationLevels)}`);
   }
 
@@ -295,6 +289,9 @@ export class IGCSEPseudocodeParser {
       for: blockFrame.ident ? `${KEYWORDS.NEXT} ${blockFrame.ident}` : KEYWORDS.NEXT,
       while: KEYWORDS.END_WHILE,
       repeat: `${KEYWORDS.UNTIL} <condition>`,
+      try: 'ENDIF',
+      except: '',  // except doesn't need a closing keyword
+      finally: '',  // finally doesn't need a closing keyword
     };
     
     return closeMap[blockFrame.type] || `END ${blockFrame.type.toUpperCase()}`;
@@ -308,9 +305,12 @@ export class IGCSEPseudocodeParser {
 
 
 
-  private convertLine(line: string, indentation: string): ParseResult {
+  private convertLine(line: string, indentation: string): ParseResult | null {
     for (const converter of ALL_CONVERTERS) {
       const result = converter(line, indentation, this.state);
+      if (result === null) {
+        return null; // Skip this line entirely
+      }
       if (result.convertedLine !== line) {
         return result;
       }

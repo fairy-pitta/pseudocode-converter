@@ -20,6 +20,11 @@ export const PATTERNS = {
   LAMBDA: /^([a-zA-Z_]\w*)\s*=\s*lambda\s+([^:]+):\s*(.+)$/,
   MULTIPLE_ASSIGNMENT: /^([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*)\s*=\s*(.+)$/,
   DICTIONARY_LITERAL: /^([a-zA-Z_]\w*)\s*=\s*\{(.*)\}$/,
-  DICTIONARY_ACCESS: /([a-zA-Z_]\w*)\[(["'][^"']*["']|\w+)\]/,
-  DICTIONARY_ASSIGNMENT: /^([a-zA-Z_]\w*)\[(["'][^"']*["']|\w+)\]\s*=\s*(.+)$/
+  DICTIONARY_ACCESS: /([a-zA-Z_]\w*)\[(\["'\][^"']*\["'\]|\w+)\]/,
+  DICTIONARY_ASSIGNMENT: /^([a-zA-Z_]\w*)\[(\["'\][^"']*\["'\]|\w+)\]\s*=\s*(.+)$/,
+  BREAK: /^break\s*$/,
+  CONTINUE: /^continue\s*$/,
+  TRY: /^try\s*:/,
+  EXCEPT: /^except(?:\s+\w+)?\s*:/,
+  FINALLY: /^finally\s*:/
 } as const;
