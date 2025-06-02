@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { IBParser } from "@/lib/python-to-pseudocode-parser-ib"
-import { CambridgePseudocodeParser } from "@/lib/python-to-pseudocode-parser-igsce"
+import { IGCSEPseudocodeParser } from "@/lib/python-to-pseudocode-parser-igcse"
 import { DeepLStyleConverter } from "@/components/converter"
 
 export default function PythonToPseudocodePage() {
@@ -15,7 +15,7 @@ export default function PythonToPseudocodePage() {
   const [sourceLanguage, setSourceLanguage] = useState<"python" | "java">("python") 
 
   const ibParser = new IBParser()
-  const cambridgeParser = new CambridgePseudocodeParser()
+  const cambridgeParser = new IGCSEPseudocodeParser()
   const parser = pseudocodeStandard === "ib" ? ibParser : cambridgeParser
 
   const convertToPseudocode = useCallback(

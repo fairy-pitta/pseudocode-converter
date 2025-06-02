@@ -2,14 +2,11 @@ import { PATTERNS } from '../patterns';
 import { KEYWORDS, BLOCK_TYPES } from '../constants';
 import { ParseResult, ParserState, BlockFrame } from '../types';
 
-export const convertFunctionDef = (line: string, indentation: string, state: ParserState): ParseResult => {
-  console.log(`[convertFunctionDef] Processing line: "${line.trim()}", pattern test: ${PATTERNS.FUNCTION_DEF.test(line)}`);
-  console.log(`[convertFunctionDef] PATTERNS.FUNCTION_DEF: ${PATTERNS.FUNCTION_DEF}`);
+export function convertFunctionDef(line: string, indentation: string = ''): ParseResult | null {
   const match = line.match(PATTERNS.FUNCTION_DEF);
-  console.log(`[convertFunctionDef] Match result:`, match);
+  
   if (!match) {
-    console.log(`[convertFunctionDef] No match for "${line.trim()}", returning original line.`);
-    return { convertedLine: line, blockType: null };
+    return null;
   }
 
   let functionName = match[1];

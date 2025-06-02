@@ -94,24 +94,20 @@ export class IGCSEPseudocodeParser {
   }
 
   private processLine(line: string): void {
-    console.log('[processLine] Start. Line:', `"${line}"`, 'currentBlockTypes:', JSON.stringify(this.state.currentBlockTypes), 'indentationLevels:', JSON.stringify(this.state.indentationLevels));
     const trimmed = line.trim();
 
     if (!trimmed) {
       this.state.outputLines.push('');
-      console.log('[processLine] Empty line processed.');
       return;
     }
 
     if (trimmed.startsWith('#')) {
-      const leadingWhitespace = getLeadingWhitespace(line);
-      this.state.outputLines.push(`${leadingWhitespace}// ${trimmed.slice(1).trim()}`);
-      // console.log('[processLine] Comment processed:', this.state.outputLines[this.state.outputLines.length - 1]);
+      const commentLine = `${getLeadingWhitespace(line)}// ${trimmed.slice(1).trim()}`;
+      this.state.outputLines.push(commentLine);
       return;
     }
 
     const currentIndentation = getLineIndentationLevel(line);
-    console.log(`[processLine] currentIndentation for "${trimmed}": ${currentIndentation}`);
 
     // Check if this line is ELIF or ELSE before closing blocks
     const isElif = /^elif\s+.+:$/i.test(trimmed);
@@ -122,13 +118,11 @@ export class IGCSEPseudocodeParser {
     //    This must happen BEFORE processing the current line's block type, especially for ELSE/ELIF.
     //    But skip for ELIF/ELSE to prevent premature END IF generation
     this.closeBlocksForIndentation(currentIndentation, skipBlockClosing);
-    console.log(`[processLine] After closeBlocksForIndentation. currentBlockTypes: ${JSON.stringify(this.state.currentBlockTypes)}, indentationLevels: ${JSON.stringify(this.state.indentationLevels)}`);
 
     // Update indentationLevels based on Python's physical indentation
     const lastStoredIndentationLevel = this.state.indentationLevels[this.state.indentationLevels.length - 1];
     if (currentIndentation > lastStoredIndentationLevel) {
         this.state.indentationLevels.push(currentIndentation);
-        console.log(`[processLine] Pushed new Python indentation level ${currentIndentation}. Stack: ${JSON.stringify(this.state.indentationLevels)}`);
     }
 
     // 2. Determine an initial indentation string (this might be refined later)
@@ -158,7 +152,6 @@ export class IGCSEPseudocodeParser {
     const conversionResult = this.convertLine(lineToConvert, initialIndentationString);
     
     if (conversionResult === null) {
-      console.log(`[processLine] Skipping line: "${trimmed}" (converter returned null)`);
       return;
     }
     
@@ -166,23 +159,17 @@ export class IGCSEPseudocodeParser {
     // IndentationLevels stack is now managed based on physical Python indent.
     if (conversionResult.blockType) {
         const newBlockType = conversionResult.blockType.type;
-        console.log(`[processLine] Processing new blockType: ${newBlockType}`);
 
         if (newBlockType === BLOCK_TYPES.ELSE || newBlockType === BLOCK_TYPES.ELIF) {
             const lastBlockOnStack = this.state.currentBlockTypes.length > 0 ? this.state.currentBlockTypes[this.state.currentBlockTypes.length - 1] : null;
             if (lastBlockOnStack && (lastBlockOnStack.type === BLOCK_TYPES.IF || lastBlockOnStack.type === BLOCK_TYPES.ELIF)) {
-                console.log(`[processLine] ${newBlockType} is replacing ${lastBlockOnStack.type} on stack.`);
                 this.state.currentBlockTypes.pop();
                 this.state.currentBlockTypes.push(conversionResult.blockType);
             } else {
-                console.warn(`[processLine] State Warning: Encountered ${newBlockType} but stack top is ${lastBlockOnStack ? lastBlockOnStack.type : 'empty'} or not IF/ELIF. Line: "${trimmed}". Pushing anyway.`);
                 this.state.currentBlockTypes.push(conversionResult.blockType);
             }
         } else {
             this.state.currentBlockTypes.push(conversionResult.blockType);
-            console.log(`[processLine] Pushed ${newBlockType} to currentBlockTypes. Stack: ${JSON.stringify(this.state.currentBlockTypes)}`);
-            // The INDENTING_BLOCK_TYPES_LIST check and associated indentationLevels.push
-            // is removed here as indentationLevels is now managed by physical Python indent.
         }
     }
 
@@ -213,18 +200,19 @@ export class IGCSEPseudocodeParser {
     const finalConvertedLine = correctIndentationString + lineContent + inlineComment;
     
     this.state.outputLines.push(finalConvertedLine);
-
-    console.log(`[processLine] Indent: InitialLvl=${initialPseudocodeIndentLevel}, CorrectLvl=${correctPseudocodeIndentLevel}. InitialStr="${initialIndentationString}", CorrectStr="${correctIndentationString}"`);
-    console.log(`[processLine] Line content: "${lineContent}", Final line: "${finalConvertedLine}"`);
-    console.log(`[processLine] End. currentBlockTypes: ${JSON.stringify(this.state.currentBlockTypes)} indentationLevels: ${JSON.stringify(this.state.indentationLevels)} Output lines count: ${this.state.outputLines.length}`);
+    
+    // Handle additional lines if present
+    if (conversionResult.additionalLines) {
+      for (const additionalLine of conversionResult.additionalLines) {
+        this.state.outputLines.push(additionalLine);
+      }
+    }
   }
 
 
 
   private closeBlocksForIndentation(currentIndentation: number, skipForElif: boolean = false): void {
-    // Skip closing blocks if this is an ELIF/ELSE at the same level as the preceding IF
     if (skipForElif) {
-      console.log('[closeBlocksForIndentation] Skipping block closure for ELIF/ELSE');
       return;
     }
     
@@ -237,30 +225,19 @@ export class IGCSEPseudocodeParser {
   }
 
   private closeCurrentBlock(): void {
-    console.log(`[closeCurrentBlock] Start. currentBlockTypes: ${JSON.stringify(this.state.currentBlockTypes)}, indentationLevels: ${JSON.stringify(this.state.indentationLevels)}`);
-
-    // Pop indentation level only if we are not at the base level (length > 1)
+    // Pop the indentation level
     if (this.state.indentationLevels.length > 1) {
-        this.state.indentationLevels.pop();
-        console.log(`[closeCurrentBlock] Popped from indentationLevels. New levels: ${JSON.stringify(this.state.indentationLevels)}`);
-    } else if (this.state.indentationLevels.length === 1 && this.state.currentBlockTypes.length > 0) {
-        // We are at the base indentation level (e.g., [0]), but there are still blocks to close.
-        // This is expected when closing the outermost blocks of the code.
-        // Do not pop from indentationLevels, but proceed to close the block.
-        console.log('[closeCurrentBlock] At base indentation level, but blocks remain. Proceeding to close block.');
-    } else if (this.state.indentationLevels.length === 0) {
-        console.error('[closeCurrentBlock] Error: indentationLevels is empty. This should not happen.');
-        // Avoid RangeError by not proceeding if indentationLevels is critically short
-        if (this.state.currentBlockTypes.length === 0) return; // No block to close anyway
+      this.state.indentationLevels.pop();
     }
 
-    const blockFrame = this.state.currentBlockTypes.pop();
-    console.log('[closeCurrentBlock] blockFrame after pop:', JSON.stringify(blockFrame));
+    // Handle case where we're at base indentation but still have blocks to close
+    if (this.state.indentationLevels.length === 0) {
+      return;
+    }
 
+    // Pop the block type
+    const blockFrame = this.state.currentBlockTypes.pop();
     if (!blockFrame) {
-      console.error('[closeCurrentBlock] Error: blockFrame is undefined after pop. currentBlockTypes was empty.');
-      const baseIndentCount = this.state.indentationLevels.length > 0 ? this.state.indentationLevels.length - 1 : 0;
-      this.state.outputLines.push(' '.repeat(baseIndentCount * INDENT_SIZE) + 'ERROR_UNDEFINED_BLOCKFRAME');
       return;
     }
 
@@ -269,24 +246,22 @@ export class IGCSEPseudocodeParser {
       this.finalizeFunctionDefinition(blockFrame.ident);
     }
 
-    const baseIndentationCount = this.state.indentationLevels.length > 0 ? this.state.indentationLevels.length - 1 : 0;
-    console.log(`[closeCurrentBlock] baseIndentationCount for closing keyword: ${baseIndentationCount}`);
-    const indentationString = ' '.repeat(baseIndentationCount * INDENT_SIZE);
+    const baseIndentationCount = Math.max(0, this.state.indentationLevels.length - 1);
     
     const closeKeyword = this.getCloseKeyword(blockFrame);
-    this.state.outputLines.push(`${indentationString}${closeKeyword}`);
+    const indentationString = ' '.repeat(baseIndentationCount * INDENT_SIZE);
+    const closeLine = `${indentationString}${closeKeyword}`;
+    
+    this.state.outputLines.push(closeLine);
     
     // Reset try block state when closing TRY block
     if (blockFrame.type === BLOCK_TYPES.TRY) {
       this.state.isTryBlockOpen = false;
       this.state.tryBlockIndentationString = null;
     }
-    
-    console.log(`[closeCurrentBlock] End. currentBlockTypes: ${JSON.stringify(this.state.currentBlockTypes)}, indentationLevels: ${JSON.stringify(this.state.indentationLevels)}`);
   }
 
   private getCloseKeyword(blockFrame: BlockFrame): string {
-    console.log('[getCloseKeyword] blockFrame:', JSON.stringify(blockFrame));
     
     // Special handling for function blocks
     if (blockFrame.type === BLOCK_TYPES.FUNCTION && blockFrame.ident) {
@@ -305,14 +280,16 @@ export class IGCSEPseudocodeParser {
       else: KEYWORDS.END_IF,
       for: blockFrame.ident ? `${KEYWORDS.NEXT} ${blockFrame.ident}` : KEYWORDS.NEXT,
       while: KEYWORDS.END_WHILE,
+      file_while: KEYWORDS.END_WHILE,
       repeat: `${KEYWORDS.UNTIL} <condition>`,
       try: 'ENDIF',
       except: '',  // except doesn't need a closing keyword
       finally: '',  // finally doesn't need a closing keyword
       return: '',  // return doesn't need a closing keyword
+      with: (this.state as any).currentFile ? `CLOSEFILE "${(this.state as any).currentFile}"` : 'END WITH',
     };
     
-    return closeMap[blockFrame.type] || `END ${blockFrame.type.toUpperCase()}`;
+    return closeMap[blockFrame.type] || `END ${blockFrame.type?.toUpperCase() || 'BLOCK'}`;
   }
 
   private inferReturnType(functionName: string): string {
@@ -415,20 +392,20 @@ export class IGCSEPseudocodeParser {
 
 
   private convertLine(line: string, indentation: string): ParseResult | null {
-    for (const converter of ALL_CONVERTERS) {
+    for (let i = 0; i < ALL_CONVERTERS.length; i++) {
+      const converter = ALL_CONVERTERS[i];
       const result = converter(line, indentation, this.state);
-      if (result === null) {
-        return null; // Skip this line entirely
-      }
-      if (result.convertedLine !== line) {
-        return result;
+      if (result) {
+        if (result.convertedLine !== line) {
+          return result;
+        }
       }
     }
     
-    // Fallback for unrecognized patterns
+    // If no converter handled the line, add a TODO comment
     return {
-      convertedLine: `${indentation}// TODO: ${line}`,
-      blockType: null,
+      convertedLine: `${indentation}// TODO: ${line.trim()}`,
+      blockType: null
     };
   }
 }

@@ -10,6 +10,12 @@ export const convertObjectInstantiation = (line: string, indentation: string, st
   const variable = match[1];
   const className = match[2];
   const args = match[3];
+  
+  // Skip built-in functions that are not class constructors
+  const builtInFunctions = ['len', 'str', 'int', 'float', 'bool', 'list', 'dict', 'set', 'tuple', 'range', 'print', 'input', 'abs', 'max', 'min', 'sum'];
+  if (builtInFunctions.includes(className.toLowerCase())) {
+    return { convertedLine: line, blockType: null };
+  }
 
   // Process arguments
   const processedArgs = args

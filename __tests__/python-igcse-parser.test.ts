@@ -782,7 +782,10 @@ WHILE NOT EOF("input.txt")
    OUTPUT line
 ENDWHILE
 CLOSEFILE "input.txt"`;
+    
+    console.log('Input Python code:', pythonCode);
     const result = pythonToIGCSEPseudocode(pythonCode);
+    console.log('Raw result:', result);
     
     // Check content without strict indentation
     const actualLines = result.split('\n').map((line: string) => line.trim());

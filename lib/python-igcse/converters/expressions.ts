@@ -1,4 +1,4 @@
-import { ParserState, ParseResult } from '../types';
+import { ParserState, ParseResult, ConverterFunction } from '../types';
 import { PATTERNS } from '../patterns';
 import { OPERATORS, KEYWORDS, COMPOUND_ASSIGNMENT_OPERATORS, BLOCK_TYPES } from '../constants';
 import { convertConditionOperators } from '../utils';
@@ -109,25 +109,39 @@ export const convertAssignment = (line: string, indentation: string, state: Pars
     }
   }
 
-  // Convert string methods and functions
-  value = value.replace(/\.upper\(\)/g, '.UPPER()');
-  value = value.replace(/\.lower\(\)/g, '.LOWER()');
-  value = value.replace(/len\(/g, 'LENGTH(');
-  
   // Keep string indexing as is (text[0] remains text[0])
   // value = value.replace(/(\w+)\[(\d+)\]/g, 'MID($1, $2, 1)');
   
-  // Handle function calls
-  if (value.includes('(') && value.includes(')')) {
-    value = value.replace(/\b(\w+)\(/g, (match: string, funcName: string) => {
-      // Capitalize first letter for function names
-      return funcName.charAt(0).toUpperCase() + funcName.slice(1) + '(';
-    });
-  }
+  // Convert string methods directly to IGCSE format first
+  value = value.replace(/(\w+)\.upper\(\)/g, 'UPPER($1)');
+  value = value.replace(/(\w+)\.lower\(\)/g, 'LOWER($1)');
   
-  // Convert to IGCSE format
-  value = value.replace(/(\w+)\.UPPER\(\)/g, 'UPPER($1)');
-  value = value.replace(/(\w+)\.LOWER\(\)/g, 'LOWER($1)');
+  // Convert len() to LENGTH()
+  value = value.replace(/len\(/g, 'LENGTH(');
+  
+  // Handle function calls (but not method calls)
+  if (value.includes('(') && value.includes(')')) {
+    // Use a more specific approach to avoid affecting method calls
+    const parts = value.split('.');
+    for (let i = 0; i < parts.length; i++) {
+      if (i === 0 || !parts[i].includes('(')) {
+        // Only process standalone function calls, not method calls
+        parts[i] = parts[i].replace(/\b(\w+)\(/g, (match: string, funcName: string) => {
+          // Skip already converted functions
+          if (funcName === 'LENGTH' || funcName === 'UPPER' || funcName === 'LOWER') {
+            return match;
+          }
+          // Skip already uppercase functions
+          if (funcName === funcName.toUpperCase()) {
+            return match;
+          }
+          // Capitalize first letter for function names
+          return funcName.charAt(0).toUpperCase() + funcName.slice(1) + '(';
+        });
+      }
+    }
+    value = parts.join('.');
+  }
   
   // Handle string concatenation - replace + with & for string operations
   // Check if the expression contains string literals or string variables
@@ -174,11 +188,28 @@ export const convertCompoundAssignment = (line: string, indentation: string, sta
   };
 };
 
-export const convertPrint = (line: string, indentation: string, state: ParserState): ParseResult => {
+export const convertPrint: ConverterFunction = (line: string, indentation: string, state: ParserState): ParseResult | null => {
   const match = line.match(PATTERNS.PRINT);
-  if (!match) return { convertedLine: line, blockType: null };
+  if (!match) return null;
 
   let rawContent = match[1].trim();
+
+  // Handle empty print
+  if (!rawContent) {
+    return {
+      convertedLine: `${indentation}${KEYWORDS.OUTPUT} ""`,
+      blockType: null
+    };
+  }
+
+  // Handle method calls like line.strip()
+  if (rawContent.includes('.strip()')) {
+    const variable = rawContent.replace('.strip()', '');
+    return {
+      convertedLine: `${indentation}${KEYWORDS.OUTPUT} ${variable}`,
+      blockType: null
+    };
+  }
 
   // First, handle potential f-strings within the raw content
   // Regex to find f-strings like f"...{var}..." or f'...{var}...' 
@@ -385,15 +416,91 @@ export const convertDictionaryAssignment = (line: string, indentation: string, s
   };
 };
 
+// Handle string indexing like: text[0]
+export const convertStringIndexing = (line: string, indentation: string, state: ParserState): ParseResult => {
+  // Match standalone string indexing expressions
+  const match = line.match(/^([A-Za-z_]\w*)\[(\d+)\]\s*$/);
+  if (!match) return { convertedLine: line, blockType: null };
+
+  const [, variable, index] = match;
+  
+  // Convert to MID function for IGCSE pseudocode
+  // MID(string, start_position, length) - IGCSE uses 1-based indexing
+  const position = parseInt(index) + 1; // Convert from 0-based to 1-based
+  
+  return { 
+    convertedLine: `${indentation}MID(${variable}, ${position}, 1)`, 
+    blockType: null 
+  };
+};
+
+// Handle standalone expressions like: text[0], text.upper(), len(text)
+export const convertStandaloneExpression = (line: string, indentation: string, state: ParserState): ParseResult => {
+  const trimmed = line.trim();
+  
+  // Skip if it's already a statement or assignment
+  if (trimmed.includes('=') || trimmed.includes(':') || trimmed.startsWith('def ') || 
+      trimmed.startsWith('class ') || trimmed.startsWith('if ') || trimmed.startsWith('for ') ||
+      trimmed.startsWith('while ') || trimmed.startsWith('return ') || trimmed.startsWith('print(')) {
+    return { convertedLine: line, blockType: null };
+  }
+  
+  // Process the expression using the same logic as in convertAssignment
+  let value = trimmed;
+  const originalValue = value;
+  
+  // Convert string methods directly to IGCSE format first
+  value = value.replace(/(\w+)\.upper\(\)/g, 'UPPER($1)');
+  value = value.replace(/(\w+)\.lower\(\)/g, 'LOWER($1)');
+  
+  // Convert len() to LENGTH()
+  value = value.replace(/len\(/g, 'LENGTH(');
+  
+  // Handle function calls (but not method calls)
+  if (value.includes('(') && value.includes(')')) {
+    // Use a more specific approach to avoid affecting method calls
+    const parts = value.split('.');
+    for (let i = 0; i < parts.length; i++) {
+      if (i === 0 || !parts[i].includes('(')) {
+        // Only process standalone function calls, not method calls
+        parts[i] = parts[i].replace(/\b(\w+)\(/g, (match: string, funcName: string) => {
+          // Skip already converted functions
+          if (funcName === 'LENGTH' || funcName === 'UPPER' || funcName === 'LOWER') {
+            return match;
+          }
+          // Skip already uppercase functions
+          if (funcName === funcName.toUpperCase()) {
+            return match;
+          }
+          // Capitalize first letter for function names
+          return funcName.charAt(0).toUpperCase() + funcName.slice(1) + '(';
+        });
+      }
+    }
+    value = parts.join('.');
+  }
+  
+  // Convert condition operators
+  value = convertConditionOperators(value);
+  
+  // Always return a result to indicate this converter handled the line
+  // Even if no conversion was needed, we want to prevent TODO comment generation
+  return { 
+    convertedLine: value !== originalValue ? `${indentation}${value}` : `${indentation}${trimmed}`, 
+    blockType: null 
+  };
+};
+
 export const expressionConverters = {
-  convertAssignment,
-  convertCompoundAssignment,
-  convertConstant,
   convertPrint,
   convertReturn,
-  convertListComprehension,
+  convertConstant,
   convertLambda,
+  convertListComprehension,
   convertMultipleAssignment,
   convertDictionaryLiteral,
   convertDictionaryAssignment,
+  convertCompoundAssignment,
+  convertAssignment,
+  convertStandaloneExpression,
 };

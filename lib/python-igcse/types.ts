@@ -3,6 +3,7 @@ import { BlockType } from './constants';
 export interface ParseResult {
   convertedLine: string;
   blockType: BlockFrame | null;
+  additionalLines?: string[];
 }
 
 export interface BlockFrame {

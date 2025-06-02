@@ -9,7 +9,7 @@ export const PATTERNS = {
   FOR_COLLECTION: /^for\s+(\w+)\s+in\s+([^:]+?)\s*:/,
   WHILE: /^while\s+(.+?)\s*:/,
   RETURN: /^return(?:\s+(.*))?/,
-  PRINT: /^print\((.*?)\)/,
+  PRINT: /^print\((.*)\)$/,
   INPUT: /(\w+)\s*=\s*input\((?:["'].*?["'])?\)/,
   CONSTANT: /^([A-Z][A-Z_]*)\s*=\s*([^=].*)$/,
   ASSIGNMENT: /^([A-Za-z_]\w*)\s*=\s*([^=].*)$/,

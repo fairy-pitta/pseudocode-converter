@@ -1,0 +1,23 @@
+import { ParserState, ParseResult, ConverterFunction } from '../types';
+export declare const convertConstant: (line: string, indentation: string, state: ParserState) => ParseResult;
+export declare const convertAssignment: (line: string, indentation: string, state: ParserState) => ParseResult;
+export declare const convertCompoundAssignment: (line: string, indentation: string, state: ParserState) => ParseResult;
+export declare const convertPrint: ConverterFunction;
+export declare const convertReturn: (line: string, indentation: string, state: ParserState) => ParseResult;
+export declare const convertListComprehension: (line: string, indentation: string, state: ParserState) => ParseResult;
+export declare const convertLambda: (line: string, indentation: string, state: ParserState) => ParseResult;
+export declare const convertMultipleAssignment: (line: string, indentation: string, state: ParserState) => ParseResult;
+export declare const convertDictionaryLiteral: (line: string, indentation: string, state: ParserState) => ParseResult;
+export declare const convertDictionaryAssignment: (line: string, indentation: string, state: ParserState) => ParseResult;
+export declare const expressionConverters: {
+    convertAssignment: (line: string, indentation: string, state: ParserState) => ParseResult;
+    convertCompoundAssignment: (line: string, indentation: string, state: ParserState) => ParseResult;
+    convertConstant: (line: string, indentation: string, state: ParserState) => ParseResult;
+    convertPrint: ConverterFunction;
+    convertReturn: (line: string, indentation: string, state: ParserState) => ParseResult;
+    convertListComprehension: (line: string, indentation: string, state: ParserState) => ParseResult;
+    convertLambda: (line: string, indentation: string, state: ParserState) => ParseResult;
+    convertMultipleAssignment: (line: string, indentation: string, state: ParserState) => ParseResult;
+    convertDictionaryLiteral: (line: string, indentation: string, state: ParserState) => ParseResult;
+    convertDictionaryAssignment: (line: string, indentation: string, state: ParserState) => ParseResult;
+};

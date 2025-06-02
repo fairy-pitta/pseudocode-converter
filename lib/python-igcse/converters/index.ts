@@ -4,10 +4,18 @@ import { expressionConverters } from './expressions';
 import * as errorHandlingConverters from './error-handling';
 import * as listConverters from './lists';
 import { objectOrientedConverters } from './object-oriented';
+import { fileOperationConverters } from './file-operations';
 import { ConverterFunction } from '../types';
 
 export const ALL_CONVERTERS: ConverterFunction[] = [
   // Order matters: More specific patterns should come before general ones.
+  
+  // File Operations - very specific patterns first
+  fileOperationConverters.convertWithOpen,
+  fileOperationConverters.convertFileWrite,
+  fileOperationConverters.convertFileRead,
+  fileOperationConverters.convertFileIteration,
+  fileOperationConverters.convertSimpleOpen,
   
   // Control Flow - specific keywords first
   controlFlowConverters.convertIf,
@@ -52,6 +60,9 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
   
   expressionConverters.convertCompoundAssignment, // Before simple assignment
   expressionConverters.convertAssignment,
+  
+  // Standalone expressions - last resort for unmatched expressions
+  expressionConverters.convertStandaloneExpression,
 ];
 
 export * from './control-flow';
@@ -60,3 +71,4 @@ export * from './expressions';
 export * from './error-handling';
 export * from './object-oriented';
 export * from './lists';
+export * from './file-operations';
