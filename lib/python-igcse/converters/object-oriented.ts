@@ -42,6 +42,21 @@ export const convertMethodCall = (line: string, indentation: string, state: Pars
   const method = match[2];
   const args = match[3];
 
+  // Handle string methods specially - convert to IGCSE format
+  if (method === 'upper') {
+    return {
+      convertedLine: `${indentation}UPPER(${object})`,
+      blockType: null
+    };
+  }
+  
+  if (method === 'lower') {
+    return {
+      convertedLine: `${indentation}LOWER(${object})`,
+      blockType: null
+    };
+  }
+
   // Capitalize method name for pseudocode convention
   const capitalizedMethod = method.charAt(0).toUpperCase() + method.slice(1);
 
@@ -67,6 +82,23 @@ export const convertMethodAssignment = (line: string, indentation: string, state
   const object = match[2];
   const method = match[3];
   const args = match[4];
+
+  // Handle string methods specially - convert to IGCSE format
+  if (method === 'upper') {
+    state.declarations.add(variable);
+    return {
+      convertedLine: `${indentation}${variable} ${OPERATORS.ASSIGN} UPPER(${object})`,
+      blockType: null
+    };
+  }
+  
+  if (method === 'lower') {
+    state.declarations.add(variable);
+    return {
+      convertedLine: `${indentation}${variable} ${OPERATORS.ASSIGN} LOWER(${object})`,
+      blockType: null
+    };
+  }
 
   // Capitalize method name for pseudocode convention
   const capitalizedMethod = method.charAt(0).toUpperCase() + method.slice(1);
