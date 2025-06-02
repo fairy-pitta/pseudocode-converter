@@ -37,12 +37,6 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
   declarationConverters.convertClassDef,
   declarationConverters.convertConstructorDef,
   
-  // Object-oriented patterns - before general expressions
-  objectOrientedConverters.convertObjectInstantiation,
-  objectOrientedConverters.convertMethodAssignment,
-  objectOrientedConverters.convertMethodCall,
-  objectOrientedConverters.convertSelfAssignment,
-  
   // Expressions & Statements - specific keywords/patterns first
   expressionConverters.convertPrint,
   expressionConverters.convertReturn,
@@ -59,6 +53,14 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
   listConverters.convertListAccess,
   
   expressionConverters.convertCompoundAssignment, // Before simple assignment
+  expressionConverters.convertFunctionCall, // Before object instantiation
+  
+  // Object-oriented patterns - after function calls
+  objectOrientedConverters.convertObjectInstantiation,
+  objectOrientedConverters.convertMethodAssignment,
+  objectOrientedConverters.convertMethodCall,
+  objectOrientedConverters.convertSelfAssignment,
+  
   expressionConverters.convertAssignment,
   
   // Standalone expressions - last resort for unmatched expressions

@@ -16,6 +16,19 @@ export const convertObjectInstantiation = (line: string, indentation: string, st
   if (builtInFunctions.includes(className.toLowerCase())) {
     return { convertedLine: line, blockType: null };
   }
+  
+  // Skip function calls - check if className is a declared function or lambda
+  // This includes lambda functions that were converted to FUNCTION definitions
+  const lowerClassName = className.toLowerCase();
+  const pascalCaseCheck = className.charAt(0).toLowerCase() + className.slice(1);
+  
+  if (state.declarations.has(lowerClassName) || 
+      state.functionHasReturn.has(lowerClassName) ||
+      state.functionHasReturn.has(pascalCaseCheck) ||
+      // Also check the original function name from lambda
+      state.declarations.has(pascalCaseCheck)) {
+    return { convertedLine: line, blockType: null };
+  }
 
   // Process arguments
   const processedArgs = args

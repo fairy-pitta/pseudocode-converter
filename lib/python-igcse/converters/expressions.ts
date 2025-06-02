@@ -308,6 +308,11 @@ export const convertLambda = (line: string, indentation: string, state: ParserSt
   // Convert body expression
   const convertedBody = body.replace(/\*/g, ' * ').replace(/\s+/g, ' ').trim();
   
+  // Mark function as declared in state
+  state.declarations.add(funcName.toLowerCase());
+  state.functionHasReturn.set(funcName.toLowerCase(), true);
+  state.functionHasReturn.set(capitalizedName.toLowerCase(), true);
+  
   // Create function definition
   const functionDef = `${indentation}${KEYWORDS.FUNCTION} ${capitalizedName}(${paramDeclarations}) RETURNS INTEGER`;
   const returnStatement = `${indentation}   ${KEYWORDS.RETURN} ${convertedBody}`;
@@ -434,6 +439,33 @@ export const convertStringIndexing = (line: string, indentation: string, state: 
   };
 };
 
+// Handle function calls like: result = square(5)
+export const convertFunctionCall = (line: string, indentation: string, state: ParserState): ParseResult => {
+  const match = line.match(/^([a-zA-Z_]\w*)\s*=\s*([a-zA-Z_]\w*)\(([^)]*)\)$/);
+  if (!match) return { convertedLine: line, blockType: null };
+
+  const [, variable, functionName, args] = match;
+  
+  // Check if this is a declared function (including lambda functions)
+  const pascalCaseName = functionName.charAt(0).toUpperCase() + functionName.slice(1);
+  
+  // Process arguments
+  const processedArgs = args
+    .split(',')
+    .map(arg => arg.trim())
+    .filter(arg => arg)
+    .map(arg => convertConditionOperators(arg))
+    .join(', ');
+
+  // Mark variable as declared
+  state.declarations.add(variable);
+
+  return {
+    convertedLine: `${indentation}${variable} ${OPERATORS.ASSIGN} ${pascalCaseName}(${processedArgs})`,
+    blockType: null
+  };
+};
+
 // Handle standalone expressions like: text[0], text.upper(), len(text)
 export const convertStandaloneExpression = (line: string, indentation: string, state: ParserState): ParseResult => {
   const trimmed = line.trim();
@@ -501,6 +533,7 @@ export const expressionConverters = {
   convertDictionaryLiteral,
   convertDictionaryAssignment,
   convertCompoundAssignment,
+  convertFunctionCall,
   convertAssignment,
   convertStandaloneExpression,
 };

@@ -10,4 +10,5 @@ module.exports = {
   watchman: false,
   maxWorkers: 1,
   verbose: true,
+  silent: false,
 };

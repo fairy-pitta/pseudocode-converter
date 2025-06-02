@@ -49,8 +49,25 @@ export class IGCSEPseudocodeParser {
     // For IGCSE, we don't pre-declare variables
     // Variables are declared inline when first assigned
     
+    // Pre-scan for lambda functions to ensure they are recognized as functions
+    this.prescanLambdaFunctions(lines);
+    
     // Pre-scan for dictionary fields to ensure complete TYPE definitions
     this.prescanDictionaryFields(lines);
+  }
+  
+  private prescanLambdaFunctions(lines: string[]): void {
+    lines.forEach(line => {
+      const lambdaMatch = line.match(PATTERNS.LAMBDA);
+      if (lambdaMatch) {
+        const [, funcName] = lambdaMatch;
+        // Mark both original and capitalized names as functions
+        this.state.declarations.add(funcName.toLowerCase());
+        this.state.functionHasReturn.set(funcName.toLowerCase(), true);
+        const capitalizedName = funcName.charAt(0).toUpperCase() + funcName.slice(1);
+        this.state.functionHasReturn.set(capitalizedName.toLowerCase(), true);
+      }
+    });
   }
 
   private prescanDictionaryFields(lines: string[]): void {
