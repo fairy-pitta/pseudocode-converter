@@ -18,6 +18,7 @@ export interface ParserState {
   typeFields?: Map<string, Set<string>>;
   isTryBlockOpen: boolean;
   tryBlockIndentationString: string | null;
+  functionHasReturn: Map<string, boolean>; // Track if functions have return statements
 }
 
 export type ConverterFunction = (line: string, indentation: string, state: ParserState) => ParseResult | null;

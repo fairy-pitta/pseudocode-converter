@@ -1,6 +1,6 @@
 import { ParserState, ParseResult } from '../types';
 import { PATTERNS } from '../patterns';
-import { OPERATORS, KEYWORDS, COMPOUND_ASSIGNMENT_OPERATORS } from '../constants';
+import { OPERATORS, KEYWORDS, COMPOUND_ASSIGNMENT_OPERATORS, BLOCK_TYPES } from '../constants';
 import { convertConditionOperators } from '../utils';
 
 const getVariableType = (value: string, state: ParserState): string => {
@@ -171,10 +171,16 @@ export const convertReturn = (line: string, indentation: string, state: ParserSt
   const match = line.match(PATTERNS.RETURN);
   if (!match) return { convertedLine: line, blockType: null };
 
+  // Find the current function and mark it as having a return statement
+  const currentFunction = state.currentBlockTypes.find(block => block.type === BLOCK_TYPES.FUNCTION);
+  if (currentFunction && currentFunction.ident) {
+    state.functionHasReturn.set(currentFunction.ident, true);
+  }
+
   const value = match[1] ? convertConditionOperators(match[1].trim()) : '';
   return { 
     convertedLine: `${indentation}${KEYWORDS.RETURN} ${value}`, 
-    blockType: null 
+    blockType: null
   };
 };
 

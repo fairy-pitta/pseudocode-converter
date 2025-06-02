@@ -12,19 +12,23 @@ export const convertFunctionDef = (line: string, indentation: string, state: Par
 
   let functionName = match[1];
   // Convert functionName to PascalCase
-  functionName = functionName.charAt(0).toUpperCase() + functionName.slice(1);
+  const pascalCaseName = functionName.charAt(0).toUpperCase() + functionName.slice(1);
+
+  // Initialize function in the tracking map (will be updated when return is found)
+  state.functionHasReturn.set(functionName, false);
 
   const paramsString = match[2] || '';
   const params = paramsString
     .split(',')
     .map(p => p.trim())
     .filter(p => p) // Remove empty strings if any from trailing commas etc.
-    .map(p => `${p} : STRING`) // Add : STRING to each parameter
+    .map(p => `${p} : INTEGER`) // Default to INTEGER for mathematical operations
     .join(', ');
 
-  const blockType: BlockFrame = { type: BLOCK_TYPES.PROCEDURE };
+  // Store function info in blockType for later processing
+  const blockType: BlockFrame = { type: BLOCK_TYPES.FUNCTION, ident: functionName };
   return { 
-    convertedLine: `${indentation}${KEYWORDS.PROCEDURE} ${functionName}(${params})`, 
+    convertedLine: `${indentation}TEMP_FUNCTION ${pascalCaseName}(${params})`, // Temporary placeholder
     blockType 
   };
 };

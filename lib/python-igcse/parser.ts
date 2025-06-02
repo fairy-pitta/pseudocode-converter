@@ -41,6 +41,7 @@ export class IGCSEPseudocodeParser {
       declarations: new Set(),
       isTryBlockOpen: false,
       tryBlockIndentationString: null,
+      functionHasReturn: new Map(),
     };
   }
 
@@ -263,6 +264,11 @@ export class IGCSEPseudocodeParser {
       return;
     }
 
+    // Handle function block closure - convert TEMP_FUNCTION to proper FUNCTION/PROCEDURE
+    if (blockFrame.type === BLOCK_TYPES.FUNCTION && blockFrame.ident) {
+      this.finalizeFunctionDefinition(blockFrame.ident);
+    }
+
     const baseIndentationCount = this.state.indentationLevels.length > 0 ? this.state.indentationLevels.length - 1 : 0;
     console.log(`[closeCurrentBlock] baseIndentationCount for closing keyword: ${baseIndentationCount}`);
     const indentationString = ' '.repeat(baseIndentationCount * INDENT_SIZE);
@@ -281,6 +287,13 @@ export class IGCSEPseudocodeParser {
 
   private getCloseKeyword(blockFrame: BlockFrame): string {
     console.log('[getCloseKeyword] blockFrame:', JSON.stringify(blockFrame));
+    
+    // Special handling for function blocks
+    if (blockFrame.type === BLOCK_TYPES.FUNCTION && blockFrame.ident) {
+      const hasReturn = this.state.functionHasReturn.get(blockFrame.ident) || false;
+      return hasReturn ? KEYWORDS.END_FUNCTION : KEYWORDS.END_PROCEDURE;
+    }
+    
     const closeMap: { [key: string]: string } = {
       function: KEYWORDS.END_FUNCTION,
       procedure: KEYWORDS.END_PROCEDURE,
@@ -296,9 +309,43 @@ export class IGCSEPseudocodeParser {
       try: 'ENDIF',
       except: '',  // except doesn't need a closing keyword
       finally: '',  // finally doesn't need a closing keyword
+      return: '',  // return doesn't need a closing keyword
     };
     
     return closeMap[blockFrame.type] || `END ${blockFrame.type.toUpperCase()}`;
+  }
+
+  private finalizeFunctionDefinition(functionName: string): void {
+    const hasReturn = this.state.functionHasReturn.get(functionName) || false;
+    const pascalCaseName = functionName.charAt(0).toUpperCase() + functionName.slice(1);
+    
+    // Find and update the function definition line
+    for (let i = 0; i < this.state.outputLines.length; i++) {
+      const line = this.state.outputLines[i];
+      if (line.includes(`TEMP_FUNCTION ${pascalCaseName}`)) {
+        if (hasReturn) {
+          // Convert to FUNCTION with RETURNS
+          this.state.outputLines[i] = line.replace(
+            `TEMP_FUNCTION ${pascalCaseName}`,
+            `${KEYWORDS.FUNCTION} ${pascalCaseName}`
+          );
+          // Add RETURNS INTEGER if not already present
+          if (!this.state.outputLines[i].includes('RETURNS')) {
+            this.state.outputLines[i] = this.state.outputLines[i].replace(
+              /\)\s*$/,
+              ') RETURNS INTEGER'
+            );
+          }
+        } else {
+          // Convert to PROCEDURE
+          this.state.outputLines[i] = line.replace(
+            `TEMP_FUNCTION ${pascalCaseName}`,
+            `${KEYWORDS.PROCEDURE} ${pascalCaseName}`
+          );
+        }
+        break;
+      }
+    }
   }
 
   private closeRemainingBlocks(): void {

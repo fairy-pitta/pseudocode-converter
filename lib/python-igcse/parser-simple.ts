@@ -18,6 +18,7 @@ export class IGCSEPseudocodeParser {
       typeFields: new Map(),
       isTryBlockOpen: false,
       tryBlockIndentationString: null,
+      functionHasReturn: new Map(),
     };
   }
 
