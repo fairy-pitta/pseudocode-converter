@@ -968,7 +968,7 @@ first_char = text[0]`;
     const expectedPseudocode = `text ← "Hello World"
 upper_text ← UPPER(text)
 length ← LENGTH(text)
-first_char ← MID(text, 0, 1)`;
+first_char ← text[0]`;
     const result = pythonToIGCSEPseudocode(pythonCode);
     
     // Check content without strict indentation

@@ -66,8 +66,8 @@ export const convertAssignment = (line: string, indentation: string, state: Pars
   value = value.replace(/\.lower\(\)/g, '.LOWER()');
   value = value.replace(/len\(/g, 'LENGTH(');
   
-  // Convert string indexing to MID function (only for single character access)
-  value = value.replace(/(\w+)\[(\d+)\]/g, 'MID($1, $2, 1)');
+  // Keep string indexing as is (text[0] remains text[0])
+  // value = value.replace(/(\w+)\[(\d+)\]/g, 'MID($1, $2, 1)');
   
   // Handle function calls
   if (value.includes('(') && value.includes(')')) {
