@@ -28,6 +28,43 @@ const getVariableType = (value: string, state: ParserState): string => {
   return type;
 };
 
+// Enhanced parameter type inference based on parameter name and context
+const inferParameterType = (paramName: string, functionContext?: string): string => {
+  // Common string parameter patterns
+  if (paramName.includes('name') || paramName.includes('text') || paramName.includes('message') || 
+      paramName.includes('str') || paramName.includes('word') || paramName.includes('title') ||
+      paramName.includes('description') || paramName.includes('content')) {
+    return 'STRING';
+  }
+  
+  // Common real/float parameter patterns
+  if (paramName.includes('price') || paramName.includes('rate') || paramName.includes('percent') ||
+      paramName.includes('ratio') || paramName.includes('decimal') || paramName.includes('float') ||
+      paramName.includes('weight') || paramName.includes('height') || paramName.includes('distance')) {
+    return 'REAL';
+  }
+  
+  // Common boolean parameter patterns
+  if (paramName.includes('is') || paramName.includes('has') || paramName.includes('can') ||
+      paramName.includes('should') || paramName.includes('flag') || paramName.includes('enabled') ||
+      paramName.includes('valid') || paramName.includes('active')) {
+    return 'BOOLEAN';
+  }
+  
+  // Function context-based inference
+  if (functionContext) {
+    if (functionContext.toLowerCase().includes('string') || functionContext.toLowerCase().includes('text')) {
+      return 'STRING';
+    }
+    if (functionContext.toLowerCase().includes('calculate') || functionContext.toLowerCase().includes('math')) {
+      return 'REAL';
+    }
+  }
+  
+  // Default to INTEGER for numeric operations
+  return 'INTEGER';
+};
+
 export const convertConstant = (line: string, indentation: string, state: ParserState): ParseResult => {
   const match = line.match(PATTERNS.CONSTANT);
   if (!match) return { convertedLine: line, blockType: null };
@@ -222,9 +259,9 @@ export const convertLambda = (line: string, indentation: string, state: ParserSt
   // Capitalize function name
   const capitalizedName = funcName.charAt(0).toUpperCase() + funcName.slice(1);
   
-  // Parse parameters
+  // Parse parameters with enhanced type inference
   const paramList = params.split(',').map(p => p.trim());
-  const paramDeclarations = paramList.map(param => `${param} : INTEGER`).join(', ');
+  const paramDeclarations = paramList.map(param => `${param} : ${inferParameterType(param, funcName)}`).join(', ');
   
   // Convert body expression
   const convertedBody = body.replace(/\*/g, ' * ').replace(/\s+/g, ' ').trim();

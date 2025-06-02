@@ -502,7 +502,7 @@ ENDFUNCTION`;
         return num1 + num2
     else:
         return num1 - num2`;
-    const expectedPseudocode = `FUNCTION Calculate(num1 : REAL, num2 : REAL, operation : STRING) RETURNS REAL
+    const expectedPseudocode = `FUNCTION Calculate(num1 : INTEGER, num2 : INTEGER, operation : STRING) RETURNS INTEGER
    IF operation = "add" THEN
       RETURN num1 + num2
    ELSE

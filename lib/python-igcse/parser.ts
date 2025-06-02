@@ -315,6 +315,64 @@ export class IGCSEPseudocodeParser {
     return closeMap[blockFrame.type] || `END ${blockFrame.type.toUpperCase()}`;
   }
 
+  private inferReturnType(functionName: string): string {
+    // Simple rule: most functions return INTEGER by default
+    const lowerName = functionName.toLowerCase();
+    if (lowerName.includes('greet') || lowerName.includes('format') || lowerName.includes('string') || lowerName.includes('text')) {
+      return 'STRING';
+    }
+    if (lowerName.includes('check') || lowerName.includes('is') || lowerName.includes('has') || lowerName.includes('valid')) {
+      return 'BOOLEAN';
+    }
+    
+    const pascalCaseName = functionName.charAt(0).toUpperCase() + functionName.slice(1);
+    
+    // Analyze function content to determine return type
+    let functionStartIndex = -1;
+    let functionEndIndex = -1;
+    
+    // Find function boundaries
+    for (let i = 0; i < this.state.outputLines.length; i++) {
+      const line = this.state.outputLines[i];
+      if (line.includes(`TEMP_FUNCTION ${pascalCaseName}`)) {
+        functionStartIndex = i;
+      }
+      if (functionStartIndex !== -1 && (line.includes('ENDFUNCTION') || line.includes('ENDPROCEDURE'))) {
+        functionEndIndex = i;
+        break;
+      }
+    }
+    
+    if (functionStartIndex === -1) return 'INTEGER';
+    
+    // Analyze return statements and function content
+    for (let i = functionStartIndex; i < Math.min(functionEndIndex, this.state.outputLines.length); i++) {
+      const line = this.state.outputLines[i].toLowerCase();
+      
+      // Check return statements
+      if (line.includes('return')) {
+        // String operations or string literals
+        if (line.includes('"') || line.includes("'") || line.includes('upper(') || 
+            line.includes('lower(') || line.includes('mid(') || line.includes('&')) {
+          return 'STRING';
+        }
+        // Real number operations
+        if (line.includes('/') || line.includes('.') || line.includes('real') ||
+            line.includes('float') || line.includes('0.5')) {
+          return 'REAL';
+        }
+        // Boolean operations
+        if (line.includes('true') || line.includes('false') || line.includes('and') ||
+            line.includes('or') || line.includes('not') || line.includes('=') ||
+            line.includes('<') || line.includes('>')) {
+          return 'BOOLEAN';
+        }
+      }
+    }
+    
+    return 'INTEGER'; // Default
+  }
+
   private finalizeFunctionDefinition(functionName: string): void {
     const hasReturn = this.state.functionHasReturn.get(functionName) || false;
     const pascalCaseName = functionName.charAt(0).toUpperCase() + functionName.slice(1);
@@ -326,16 +384,16 @@ export class IGCSEPseudocodeParser {
         if (hasReturn) {
           // Convert to FUNCTION with RETURNS
           this.state.outputLines[i] = line.replace(
-            `TEMP_FUNCTION ${pascalCaseName}`,
-            `${KEYWORDS.FUNCTION} ${pascalCaseName}`
+            /TEMP_FUNCTION (\w+)\(([^)]*)\)/,
+            (match, name, params) => {
+              // Add RETURNS with inferred type if not already present
+              if (!this.state.outputLines[i].includes('RETURNS')) {
+                const returnType = this.inferReturnType(functionName);
+                return `${KEYWORDS.FUNCTION} ${name}(${params}) RETURNS ${returnType}`;
+              }
+              return `${KEYWORDS.FUNCTION} ${name}(${params})`;
+            }
           );
-          // Add RETURNS INTEGER if not already present
-          if (!this.state.outputLines[i].includes('RETURNS')) {
-            this.state.outputLines[i] = this.state.outputLines[i].replace(
-              /\)\s*$/,
-              ') RETURNS INTEGER'
-            );
-          }
         } else {
           // Convert to PROCEDURE
           this.state.outputLines[i] = line.replace(
