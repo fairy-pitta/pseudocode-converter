@@ -65,11 +65,13 @@ export const convertAssignment = (line: string, indentation: string, state: Pars
   value = value.replace(/\.upper\(\)/g, '.UPPER()');
   value = value.replace(/\.lower\(\)/g, '.LOWER()');
   value = value.replace(/len\(/g, 'LENGTH(');
-  // value = value.replace(/(\w+)\[(\d+)\]/g, 'MID($1, $2, 1)'); // This line was causing incorrect conversion of list access
+  
+  // Convert string indexing to MID function (only for single character access)
+  value = value.replace(/(\w+)\[(\d+)\]/g, 'MID($1, $2, 1)');
   
   // Handle function calls
   if (value.includes('(') && value.includes(')')) {
-    value = value.replace(/\b(\w+)\(/g, (match, funcName) => {
+    value = value.replace(/\b(\w+)\(/g, (match: string, funcName: string) => {
       // Capitalize first letter for function names
       return funcName.charAt(0).toUpperCase() + funcName.slice(1) + '(';
     });
@@ -296,9 +298,7 @@ export const convertDictionaryLiteral = (line: string, indentation: string, stat
   typeLines.push(`${indentation}ENDTYPE`);
   typeLines.push('');
   
-  // Generate variable declaration and assignments
-  typeLines.push(`${indentation}${KEYWORDS.DECLARE} ${variable} : ${typeName}`);
-  
+  // Generate field assignments directly (no DECLARE needed)
   pairs.forEach(pair => {
     typeLines.push(`${indentation}${variable}.${pair.key} ${OPERATORS.ASSIGN} ${pair.value}`);
   });
