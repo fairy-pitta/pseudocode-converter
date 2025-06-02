@@ -12,6 +12,8 @@ const INDENTING_BLOCK_TYPES_LIST: Array<typeof BLOCK_TYPES[keyof typeof BLOCK_TY
   BLOCK_TYPES.FUNCTION,
   BLOCK_TYPES.PROCEDURE,
   BLOCK_TYPES.CLASS,
+  BLOCK_TYPES.CONSTRUCTOR,
+  BLOCK_TYPES.METHOD,
   BLOCK_TYPES.REPEAT,
 ];
 
@@ -283,6 +285,8 @@ export class IGCSEPseudocodeParser {
       function: KEYWORDS.END_FUNCTION,
       procedure: KEYWORDS.END_PROCEDURE,
       class: KEYWORDS.END_CLASS,
+      constructor: KEYWORDS.END_PROCEDURE, // Constructor uses ENDPROCEDURE
+      method: KEYWORDS.END_PROCEDURE, // Method uses ENDPROCEDURE
       if: KEYWORDS.END_IF,
       elif: KEYWORDS.END_IF,
       else: KEYWORDS.END_IF,

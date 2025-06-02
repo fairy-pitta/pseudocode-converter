@@ -3,6 +3,7 @@ import { declarationConverters } from './declarations';
 import { expressionConverters } from './expressions';
 import * as errorHandlingConverters from './error-handling';
 import * as listConverters from './lists';
+import { objectOrientedConverters } from './object-oriented';
 import { ConverterFunction } from '../types';
 
 export const ALL_CONVERTERS: ConverterFunction[] = [
@@ -26,6 +27,13 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
   // Declarations
   declarationConverters.convertFunctionDef,
   declarationConverters.convertClassDef,
+  declarationConverters.convertConstructorDef,
+  
+  // Object-oriented patterns - before general expressions
+  objectOrientedConverters.convertObjectInstantiation,
+  objectOrientedConverters.convertMethodAssignment,
+  objectOrientedConverters.convertMethodCall,
+  objectOrientedConverters.convertSelfAssignment,
   
   // Expressions & Statements - specific keywords/patterns first
   expressionConverters.convertPrint,
@@ -49,4 +57,6 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
 export * from './control-flow';
 export * from './declarations';
 export * from './expressions';
+export * from './error-handling';
+export * from './object-oriented';
 export * from './lists';

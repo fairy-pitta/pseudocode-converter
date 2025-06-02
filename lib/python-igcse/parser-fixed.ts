@@ -12,8 +12,10 @@ export class IGCSEPseudocodeParser {
       outputLines: [],
       currentBlockTypes: [],
       indentationLevels: [0],
-      declarations: new Set(),
+      declarations: new Set<string>(),
       typeFields: new Map(),
+      isTryBlockOpen: false,
+      tryBlockIndentationString: null,
     };
   }
 
@@ -160,7 +162,7 @@ export class IGCSEPseudocodeParser {
     
     for (const converter of ALL_CONVERTERS) {
       const result = converter(line, indentationString, this.state);
-      if (result.convertedLine !== line) {
+      if (result && result.convertedLine !== line) {
         return result;
       }
     }

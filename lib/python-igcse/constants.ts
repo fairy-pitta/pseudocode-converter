@@ -53,6 +53,13 @@ export const KEYWORDS = {
   END_FUNCTION: 'ENDFUNCTION',
   END_PROCEDURE: 'ENDPROCEDURE',
   END_CLASS: 'ENDCLASS',
+  // Object-oriented keywords
+  INHERITS: 'INHERITS',
+  NEW: 'NEW',
+  CALL: 'CALL',
+  PRIVATE: 'PRIVATE',
+  PUBLIC: 'PUBLIC',
+  SELF: 'self',
 } as const;
 
 export const BLOCK_TYPES = {
@@ -74,6 +81,9 @@ export const BLOCK_TYPES = {
   TRY: 'try',
   EXCEPT: 'except',
   FINALLY: 'finally',
+  // Object-oriented block types
+  CONSTRUCTOR: 'constructor',
+  METHOD: 'method',
   // Add other block types as needed
 } as const;
 

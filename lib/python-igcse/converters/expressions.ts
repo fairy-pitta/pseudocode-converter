@@ -146,6 +146,13 @@ export const convertPrint = (line: string, indentation: string, state: ParserSta
   const args = rawContent.split(',').map(arg => arg.trim());
   let content = args.join(', ');
 
+  // Convert method calls to proper pseudocode format
+  content = content.replace(/([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)\(([^)]*)\)/g, (match, object, method, args) => {
+    const capitalizedMethod = method.charAt(0).toUpperCase() + method.slice(1);
+    const processedArgs = args.trim() ? args.split(',').map((arg: string) => arg.trim()).join(', ') : '';
+    return processedArgs ? `${object}.${capitalizedMethod}(${processedArgs})` : `${object}.${capitalizedMethod}()`;
+  });
+
   // Convert dictionary access to dot notation
   content = content.replace(PATTERNS.DICTIONARY_ACCESS, (match, variable, key) => {
     const cleanKey = key.replace(/["']/g, '');

@@ -26,5 +26,11 @@ export const PATTERNS = {
   CONTINUE: /^continue\s*$/,
   TRY: /^try\s*:/,
   EXCEPT: /^except(?:\s+\w+)?\s*:/,
-  FINALLY: /^finally\s*:/
+  FINALLY: /^finally\s*:/,
+  // Object-oriented patterns
+  OBJECT_INSTANTIATION: /^([a-zA-Z_]\w*)\s*=\s*(\w+)\(([^)]*)\)$/,
+  METHOD_CALL: /^\s*([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)\(([^)]*)\)\s*$/,
+  METHOD_ASSIGNMENT: /^([a-zA-Z_]\w*)\s*=\s*([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)\(([^)]*)\)$/,
+  SELF_ASSIGNMENT: /^self\.([a-zA-Z_]\w*)\s*=\s*(.+)$/,
+  CONSTRUCTOR_DEF: /^def\s+__init__\s*\(([^)]*)\)\s*:/
 } as const;

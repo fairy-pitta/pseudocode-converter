@@ -34,10 +34,36 @@ export const convertClassDef = (line: string, indentation: string, state: Parser
   if (!match) return { convertedLine: line, blockType: null };
 
   const className = match[1];
+  const parentClass = match[2]; // Capture inheritance
   const blockType: BlockFrame = { type: BLOCK_TYPES.CLASS };
   
+  let convertedLine = `${indentation}${KEYWORDS.CLASS} ${className}`;
+  if (parentClass) {
+    convertedLine += ` ${KEYWORDS.INHERITS} ${parentClass}`;
+  }
+  
   return { 
-    convertedLine: `${indentation}${KEYWORDS.CLASS} ${className}`, 
+    convertedLine, 
+    blockType 
+  };
+};
+
+export const convertConstructorDef = (line: string, indentation: string, state: ParserState): ParseResult => {
+  const match = line.match(PATTERNS.CONSTRUCTOR_DEF);
+  if (!match) return { convertedLine: line, blockType: null };
+
+  const paramsString = match[1] || '';
+  // Remove 'self' parameter and process remaining parameters
+  const params = paramsString
+    .split(',')
+    .map(p => p.trim())
+    .filter(p => p && p !== 'self')
+    .map(p => `${p} : STRING`)
+    .join(', ');
+
+  const blockType: BlockFrame = { type: BLOCK_TYPES.CONSTRUCTOR };
+  return { 
+    convertedLine: `${indentation}${KEYWORDS.PUBLIC} ${KEYWORDS.PROCEDURE} ${KEYWORDS.NEW}(${params})`, 
     blockType 
   };
 };
@@ -45,4 +71,5 @@ export const convertClassDef = (line: string, indentation: string, state: Parser
 export const declarationConverters = {
   convertFunctionDef,
   convertClassDef,
+  convertConstructorDef,
 };

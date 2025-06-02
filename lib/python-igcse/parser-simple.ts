@@ -14,8 +14,10 @@ export class IGCSEPseudocodeParser {
       outputLines: [],
       currentBlockTypes: [],
       indentationLevels: [0],
-      declarations: new Set(),
-      typeFields: new Map()
+      declarations: new Set<string>(),
+      typeFields: new Map(),
+      isTryBlockOpen: false,
+      tryBlockIndentationString: null,
     };
   }
 
