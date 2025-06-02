@@ -2,7 +2,7 @@ import { PATTERNS } from '../patterns';
 import { KEYWORDS, BLOCK_TYPES } from '../constants';
 import { ParseResult, ParserState, BlockFrame } from '../types';
 
-export function convertFunctionDef(line: string, indentation: string = ''): ParseResult | null {
+export function convertFunctionDef(line: string, indentation: string = '', state?: ParserState): ParseResult | null {
   const match = line.match(PATTERNS.FUNCTION_DEF);
   
   if (!match) {
@@ -14,7 +14,9 @@ export function convertFunctionDef(line: string, indentation: string = ''): Pars
   const pascalCaseName = functionName.charAt(0).toUpperCase() + functionName.slice(1);
 
   // Initialize function in the tracking map (will be updated when return is found)
-  state.functionHasReturn.set(functionName, false);
+  if (state) {
+    state.functionHasReturn.set(functionName, false);
+  }
 
   const paramsString = match[2] || '';
   // Enhanced parameter type inference
