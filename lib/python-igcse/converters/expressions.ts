@@ -91,11 +91,22 @@ export const convertAssignment = (line: string, indentation: string, state: Pars
   // Handle input separately if it's part of the assignment
   const inputMatch = value.match(/^(?:int\()?input\((["'].*?["'])?\)(?:\))?/);
   if (inputMatch) {
-    // For IGCSE pseudocode, we only use INPUT without the prompt
-    return { 
-      convertedLine: `${indentation}${KEYWORDS.INPUT} ${variable}`, 
-      blockType: null 
-    };
+    const prompt = inputMatch[1];
+    if (prompt) {
+      // Generate OUTPUT statement for the prompt, then INPUT statement
+      const outputLine = `${indentation}${KEYWORDS.OUTPUT} ${prompt}`;
+      const inputLine = `${indentation}${KEYWORDS.INPUT} ${variable}`;
+      return { 
+        convertedLine: `${outputLine}\n${inputLine}`, 
+        blockType: null 
+      };
+    } else {
+      // For IGCSE pseudocode, we only use INPUT without the prompt
+      return { 
+        convertedLine: `${indentation}${KEYWORDS.INPUT} ${variable}`, 
+        blockType: null 
+      };
+    }
   }
 
   // Convert string methods and functions
