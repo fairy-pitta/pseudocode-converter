@@ -25,7 +25,8 @@ export const PATTERNS = {
   BREAK: /^break\s*$/,
   CONTINUE: /^continue\s*$/,
   TRY: /^try\s*:/,
-  EXCEPT: /^except(?:\s+\w+)?\s*:/,
+  EXCEPT: /^except(?:\s+([\w.]+)(?:\s+as\s+\w+)?)?\s*:/, // Captures exception type, and optionally 'as alias'
+  EXCEPT_AS: /^except\s+([\w.]+)\s+as\s+(\w+)\s*:/, // Specifically for 'except Type as alias'
   FINALLY: /^finally\s*:/,
   // Object-oriented patterns
   OBJECT_INSTANTIATION: /^([a-zA-Z_]\w*)\s*=\s*(\w+)\(([^)]*)\)$/,

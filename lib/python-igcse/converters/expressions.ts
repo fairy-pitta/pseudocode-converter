@@ -385,6 +385,56 @@ export const convertDictionaryAssignment = (line: string, indentation: string, s
   };
 };
 
+export const convertSelfAssignment = (line: string, indentation: string, state: ParserState): ParseResult => {
+  const match = line.match(PATTERNS.SELF_ASSIGNMENT);
+  if (!match) return { convertedLine: line, blockType: null };
+
+  const attribute = match[1].trim();
+  let value = match[2].trim();
+
+  value = convertConditionOperators(value);
+
+  return {
+    convertedLine: `${indentation}THIS.${attribute} ${OPERATORS.ASSIGN} ${value}`,
+    blockType: null
+  };
+};
+
+export const convertObjectInstantiation = (line: string, indentation: string, state: ParserState): ParseResult => {
+  const match = line.match(PATTERNS.OBJECT_INSTANTIATION);
+  if (!match) return { convertedLine: line, blockType: null };
+
+  const variable = match[1].trim();
+  const className = match[2].trim();
+  const args = match[3] ? match[3].trim() : '';
+
+  const declaration = `${indentation}${KEYWORDS.DECLARE} ${variable} : ${className}`;
+  const instantiation = `${indentation}${variable} ${OPERATORS.ASSIGN} ${KEYWORDS.NEW} ${className}(${args})`;
+  
+  state.declarations.add(variable);
+
+  return {
+    convertedLine: `${declaration}\n${instantiation}`,
+    blockType: null
+  };
+};
+
+export const convertMethodCall = (line: string, indentation: string, state: ParserState): ParseResult => {
+  const match = line.match(PATTERNS.METHOD_CALL);
+  if (!match) return { convertedLine: line, blockType: null };
+
+  const object = match[1].trim();
+  const method = match[2].trim();
+  const args = match[3] ? match[3].trim() : '';
+  
+  const capitalizedMethod = method.charAt(0).toUpperCase() + method.slice(1);
+
+  return {
+    convertedLine: `${indentation}${KEYWORDS.CALL} ${object}.${capitalizedMethod}(${args})`,
+    blockType: null
+  };
+};
+
 export const expressionConverters = {
   convertAssignment,
   convertCompoundAssignment,
@@ -396,4 +446,7 @@ export const expressionConverters = {
   convertMultipleAssignment,
   convertDictionaryLiteral,
   convertDictionaryAssignment,
+  convertSelfAssignment,
+  convertObjectInstantiation,
+  convertMethodCall,
 };

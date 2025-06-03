@@ -58,16 +58,14 @@ export const convertClassDef = (line: string, indentation: string, state: Parser
   if (!match) return { convertedLine: line, blockType: null };
 
   const className = match[1];
-  const parentClass = match[2]; // Capture inheritance
-  const blockType: BlockFrame = { type: BLOCK_TYPES.CLASS };
+  // For IGCSE, class definitions become TYPE definitions
+  // Attributes are typically defined within the TYPE block or implicitly by assignments in constructor/methods
+  // We will handle attribute collection in the parser or a dedicated pass
+  const blockType: BlockFrame = { type: BLOCK_TYPES.CLASS, ident: className }; // Store className for context
   
-  let convertedLine = `${indentation}${KEYWORDS.CLASS} ${className}`;
-  if (parentClass) {
-    convertedLine += ` ${KEYWORDS.INHERITS} ${parentClass}`;
-  }
-  
+  // TYPE ClassName (attributes will be added by parser based on self. assignments)
   return { 
-    convertedLine, 
+    convertedLine: `${indentation}${KEYWORDS.TYPE} ${className}`, 
     blockType 
   };
 };
@@ -76,41 +74,39 @@ export const convertConstructorDef = (line: string, indentation: string, state: 
   const match = line.match(PATTERNS.CONSTRUCTOR_DEF);
   if (!match) return { convertedLine: line, blockType: null };
 
+  // Get the class name from the current block context
+  let className = 'Constructor'; // Default if not in class context
+  if (state.currentBlockTypes.length > 0) {
+    const parentBlock = state.currentBlockTypes[state.currentBlockTypes.length - 1];
+    if (parentBlock.type === BLOCK_TYPES.CLASS && parentBlock.ident) {
+      className = parentBlock.ident;
+    }
+  }
+
   const paramsString = match[1] || '';
   
-  // Enhanced parameter type inference for constructor
   const inferConstructorParameterType = (paramName: string): string => {
-    // Common string parameter patterns
     if (paramName.includes('name') || paramName.includes('text') || paramName.includes('message') || 
         paramName.includes('str') || paramName.includes('word') || paramName.includes('title') ||
         paramName.includes('description') || paramName.includes('content')) {
       return 'STRING';
     }
-    
-    // Common real/float parameter patterns
     if (paramName.includes('price') || paramName.includes('rate') || paramName.includes('percent') ||
         paramName.includes('ratio') || paramName.includes('decimal') || paramName.includes('float') ||
         paramName.includes('weight') || paramName.includes('height') || paramName.includes('distance')) {
       return 'REAL';
     }
-    
-    // Common boolean parameter patterns
     if (paramName.includes('is') || paramName.includes('has') || paramName.includes('can') ||
         paramName.includes('should') || paramName.includes('flag') || paramName.includes('enabled') ||
         paramName.includes('valid') || paramName.includes('active')) {
       return 'BOOLEAN';
     }
-    
-    // For constructor parameters, common patterns suggest STRING for names, ages, etc.
     if (paramName.includes('age') || paramName.includes('id') || paramName.includes('count')) {
       return 'INTEGER';
     }
-    
-    // Default to STRING for constructor parameters (often names, descriptions, etc.)
     return 'STRING';
   };
   
-  // Remove 'self' parameter and process remaining parameters
   const params = paramsString
     .split(',')
     .map(p => p.trim())
@@ -118,9 +114,14 @@ export const convertConstructorDef = (line: string, indentation: string, state: 
     .map(p => `${p} : ${inferConstructorParameterType(p)}`)
     .join(', ');
 
-  const blockType: BlockFrame = { type: BLOCK_TYPES.CONSTRUCTOR };
+  // IGCSE uses PROCEDURE for constructors, often named 'Constructor' or ClassName
+  // For consistency with IGCSE examples, let's use 'Constructor' or the class name itself.
+  // The actual instantiation is done via `NEW ClassName()`
+  const constructorProcedureName = className; // Or a fixed "Constructor"
+
+  const blockType: BlockFrame = { type: BLOCK_TYPES.CONSTRUCTOR, ident: constructorProcedureName };
   return { 
-    convertedLine: `${indentation}${KEYWORDS.PUBLIC} ${KEYWORDS.PROCEDURE} ${KEYWORDS.NEW}(${params})`, 
+    convertedLine: `${indentation}${KEYWORDS.PROCEDURE} ${constructorProcedureName}(${params})`, 
     blockType 
   };
 };

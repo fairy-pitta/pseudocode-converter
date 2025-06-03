@@ -656,14 +656,13 @@ y ← 10`;
   // 14. Try-Except (Error Handling)
   test('should handle try-except block', () => {
     const pythonCode = `try:
-    result = 10 / x
-except:
-    print("Error occurred")`;
-    const expectedPseudocode = `// Error handling: try-except block
-IF x ≠ 0 THEN
-   result ← 10 / x
+    print(x)
+except NameError:
+    print("Variable not defined")`;
+    const expectedPseudocode = `IF variable x is defined THEN
+   OUTPUT x
 ELSE
-   OUTPUT "Error occurred"
+   OUTPUT "Variable not defined"
 ENDIF`;
     const result = pythonToIGCSEPseudocode(pythonCode);
     
