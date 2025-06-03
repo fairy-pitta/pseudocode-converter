@@ -26,12 +26,12 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
   controlFlowConverters.convertWhile,
   controlFlowConverters.convertBreak,
   controlFlowConverters.convertContinue,
-  
+
   // Error Handling
   errorHandlingConverters.convertTry,
   errorHandlingConverters.convertExcept,
   errorHandlingConverters.convertFinally,
-  
+
   // Declarations
   declarationConverters.convertFunctionDef,
   declarationConverters.convertClassDef,
@@ -46,12 +46,12 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
   expressionConverters.convertMultipleAssignment, // Before simple assignment
   expressionConverters.convertDictionaryLiteral, // Before simple assignment
   expressionConverters.convertDictionaryAssignment, // Before simple assignment
-  
+
   // List operations - before general assignment
   listConverters.convertListDeclaration,
   listConverters.convertListAssignment,
   listConverters.convertListAccess,
-  
+
   expressionConverters.convertCompoundAssignment, // Before simple assignment
   expressionConverters.convertFunctionCall, // Before object instantiation
   
@@ -69,7 +69,19 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
 
 export * from './control-flow';
 export * from './declarations';
-export * from './expressions';
+export {
+  // Explicitly export non-conflicting members from expressions
+  convertPrint,
+  convertReturn,
+  convertConstant,
+  convertLambda,
+  convertListComprehension,
+  convertMultipleAssignment,
+  convertDictionaryLiteral,
+  convertDictionaryAssignment,
+  convertCompoundAssignment,
+  convertAssignment,
+} from './expressions';
 export * from './error-handling';
 export * from './object-oriented';
 export * from './lists';

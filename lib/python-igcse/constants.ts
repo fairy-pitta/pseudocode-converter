@@ -60,6 +60,7 @@ export const KEYWORDS = {
   PRIVATE: 'PRIVATE',
   PUBLIC: 'PUBLIC',
   SELF: 'self',
+  TYPE: 'TYPE', // Added for class/type definitions
 } as const;
 
 export const BLOCK_TYPES = {
@@ -78,13 +79,10 @@ export const BLOCK_TYPES = {
   ENDFUNCTION: 'endfunction',
   ENDCLASS: 'endclass',
   RETURN: 'return',
-  TRY: 'try',
-  EXCEPT: 'except',
-  FINALLY: 'finally',
   // Object-oriented block types
   CONSTRUCTOR: 'constructor',
   METHOD: 'method',
   // Add other block types as needed
 } as const;
 
-export type BlockType = typeof BLOCK_TYPES[keyof typeof BLOCK_TYPES];
+export type BlockType = typeof BLOCK_TYPES[Exclude<keyof typeof BLOCK_TYPES, 'TRY' | 'EXCEPT' | 'FINALLY'>];
