@@ -43,6 +43,7 @@ export class IGCSEPseudocodeParser {
       isTryBlockOpen: false,
       tryBlockIndentationString: null,
       functionHasReturn: new Map(),
+      typeFields: new Map(), // 辞書フィールドを追跡するためのマップを初期化
     };
   }
 

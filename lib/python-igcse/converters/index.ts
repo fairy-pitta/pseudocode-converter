@@ -54,6 +54,7 @@ export const ALL_CONVERTERS: ConverterFunction[] = [
 
   expressionConverters.convertCompoundAssignment, // Before simple assignment
   expressionConverters.convertFunctionCall, // Before object instantiation
+  expressionConverters.convertStandaloneFunctionCall, // For procedure calls without return value
   
   // Object-oriented patterns - after function calls
   objectOrientedConverters.convertObjectInstantiation,

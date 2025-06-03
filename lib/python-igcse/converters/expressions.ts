@@ -143,13 +143,7 @@ export const convertAssignment = (line: string, indentation: string, state: Pars
     value = parts.join('.');
   }
   
-  // Handle string concatenation - replace + with & for string operations
-  // Check if the expression contains string literals or string variables
-  if (value.includes('"') || value.includes("'")) {
-    // Replace + with & for string concatenation
-    value = value.replace(/\s*\+\s*/g, ' & ');
-  }
-  
+  // Convert condition operators
   value = convertConditionOperators(value);
   
   // For IGCSE, we don't pre-declare variables - they are used directly
@@ -466,6 +460,30 @@ export const convertFunctionCall = (line: string, indentation: string, state: Pa
   };
 };
 
+// Handle standalone function calls like: greet("John")
+export const convertStandaloneFunctionCall = (line: string, indentation: string, state: ParserState): ParseResult => {
+  const match = line.match(/^([a-zA-Z_]\w*)\(([^)]*)\)$/);
+  if (!match) return { convertedLine: line, blockType: null };
+
+  const [, functionName, args] = match;
+  
+  // Capitalize function name for pseudocode convention
+  const pascalCaseName = functionName.charAt(0).toUpperCase() + functionName.slice(1);
+
+  // Process arguments
+  const processedArgs = args
+    .split(',')
+    .map(arg => arg.trim())
+    .filter(arg => arg)
+    .map(arg => convertConditionOperators(arg))
+    .join(', ');
+
+  return {
+    convertedLine: `${indentation}${KEYWORDS.CALL} ${pascalCaseName}(${processedArgs})`,
+    blockType: null
+  };
+};
+
 // Handle standalone expressions like: text[0], text.upper(), len(text)
 export const convertStandaloneExpression = (line: string, indentation: string, state: ParserState): ParseResult => {
   const trimmed = line.trim();
@@ -534,6 +552,9 @@ export const expressionConverters = {
   convertDictionaryAssignment,
   convertCompoundAssignment,
   convertFunctionCall,
+  convertStandaloneFunctionCall,
   convertAssignment,
   convertStandaloneExpression,
 };
+
+// 重複エクスポートを削除
