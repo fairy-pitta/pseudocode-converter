@@ -82,7 +82,11 @@ export const BLOCK_TYPES = {
   // Object-oriented block types
   CONSTRUCTOR: 'constructor',
   METHOD: 'method',
+  // Error handling block types
+  TRY: 'try',
+  EXCEPT: 'except',
+  FINALLY: 'finally',
   // Add other block types as needed
 } as const;
 
-export type BlockType = typeof BLOCK_TYPES[Exclude<keyof typeof BLOCK_TYPES, 'TRY' | 'EXCEPT' | 'FINALLY'>];
+export type BlockType = typeof BLOCK_TYPES[keyof typeof BLOCK_TYPES];
