@@ -1,27 +1,11 @@
-export const PATTERNS = {
-  CLASS: /^(?:public\s+)?class\s+(\w+)/,
-  METHOD: /^(?:public|private)?\s*(static\s+)?(void|int|double|boolean|String|float|long|byte|char)\s+(\w+)\(([^)]*)\)\s*\{/,
-  IF: /^if\s*\((.+)\)\s*\{/,
-  ELIF: /^(?:\}\s*)?else\s+if\s*\((.+)\)\s*\{/,
-  ELIF_ONLY: /^else\s+if\s*\((.+)\)\s*\{/,
-  ELSE: /^(?:\}\s*)?else\s*\{/,
-  ELSE_ONLY: /^else\s*\{/,
-  FOR_COUNT: /^for\s*\((?:int|long|byte)\s+(\w+)\s*=\s*(\d+)\s*;\s*\1\s*(<|<=)\s*(\w+|\d+)\s*;\s*\1\+\+\)\s*\{/,
-  FOR_EACH: /^for\s*\((\w+)\s*:\s*(\w+)\)\s*\{/,
-  WHILE: /^while\s*\((.+)\)\s*\{/,
-  DO: /^do\s*\{/,
-  TRY: /^try\s*\{/,
-  CATCH: /^catch\s*\(([^\s]+)\s+(\w+)\)\s*\{/,
-  FINALLY: /^finally\s*\{/,
-  RETURN: /^return\s*(.*);/,
-  PRINT: /^System\.out\.(?:println|print)\((.*?)\);?$/,
-  INPUT: /^(\w+)\s*=\s*(\w+)\.(nextInt|nextDouble|nextLine|nextBoolean|nextFloat|nextLong|nextByte)\(\);/,
-  CONST_DECL: /^final\s+(int|double|boolean|String|float|char|long|byte)\s+(\w+)\s*=\s*([^;]+);/,
-  VAR_DECL: /^(int|double|boolean|String|float|char|long|byte)\s+(\w+)(?:\s*=\s*([^;]+))?;/,
-  ARRAY_LIT: /^([\w<>]+)\[\]\s+(\w+)\s*=\s*\{([^}]*)\};/,
-  ARRAY_SIZED: /^([\w<>]+)\[\]\s+(\w+)\s*=\s*new\s+\1\[(\d+)\];/,
-  ASSIGN: /^([A-Za-z_]\w*)\s*=\s*([^=].*);/,
-  MATH_EXPR: /^(\w+)\s*=\s*Math\.(pow|sqrt|abs|floor|ceil|round)\(([^)]+)\);/,
-  COMP_ASSIGN: /^(\w+)\s*(\+=|\-=|\*=|\/=|%=)\s*([^;]+);/,
-  ARRAY_DECL: /^([\w<>]+)\[\]\s+(\w+)\s*=\s*(?:\{([^}]*)\}|new\s+\1\[(\d+)\]);/,
-};
+export const VARIABLE_DECLARATION_ASSIGNMENT = /^\s*(int|String|boolean)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+);\s*$/;
+export const SYSTEM_OUT_PRINTLN = /^\s*System\.out\.println\((.*)\);\s*$/;
+export const IF_STATEMENT = /^\s*if\s*\((.*)\)\s*\{\s*([\s\S]*?)\s*\}$/m;
+export const IF_ELSE_STATEMENT = /^\s*if\s*\((.*)\)\s*\{\s*([\s\S]*?)\s*\}\s*else\s*\{\s*([\s\S]*?)\s*\}$/m;
+export const LOGICAL_OPERATION_BINARY = /^\s*boolean\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+?)\s*([&|]{2})\s*(.+);\s*$/;
+export const LOGICAL_OPERATION_UNARY_NOT = /^\s*boolean\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*!\s*(.+);\s*$/;
+export const STRING_ASSIGNMENT = /^\s*String\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+);\s*$/;
+export const FOR_LOOP = /^\s*for\s*\(\s*int\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(\d+)\s*;\s*\1\s*<\s*(\d+)\s*;\s*\1\+\+\s*\)\s*\{\s*([\s\S]*?)\s*\}$/m;
+export const WHILE_LOOP = /^\s*while\s*\((.*)\)\s*\{\s*([\s\S]*?)\s*\}$/m;
+export const INCREMENT = /^\s*([a-zA-Z_][a-zA-Z0-9_]*)\+\+;\s*$/;
+export const DECREMENT = /^\s*([a-zA-Z_][a-zA-Z0-9_]*)--;\s*$/;

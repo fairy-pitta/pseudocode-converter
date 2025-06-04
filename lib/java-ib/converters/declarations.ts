@@ -1,41 +1,14 @@
-import { ParseResult } from '../types';
-import { PATTERNS } from '../patterns';
-import { ARW } from '../constants';
+import { VARIABLE_DECLARATION_ASSIGNMENT } from '../patterns';
+import { toIBPseudocode } from '../utils';
 
-export const constDecl = (s: string, i: string): ParseResult => {
-  const m = s.match(PATTERNS.CONST_DECL);
-  return m 
-    ? { code: `${i}CONSTANT ${m[1]} ${ARW} ${m[2]}`, block: null, changed: true }
-    : { code: '', block: null, changed: false };
-};
-
-export const varDecl = (s: string, i: string): ParseResult => {
-  const m = s.match(PATTERNS.VAR_DECL);
-  return m 
-    ? { code: `${i}DECLARE ${m[1]}${m[2] ? ` ${ARW} ${m[2]}` : ''}`, block: null, changed: true }
-    : { code: '', block: null, changed: false };
-};
-
-export const arrayDecl = (s: string, i: string): ParseResult => {
-  const lit = s.match(PATTERNS.ARRAY_LIT);
-  if (lit) {
-    return { code: `${i}DECLARE ${lit[2]} ${ARW} [${lit[3]}]`, block: null, changed: true };
-  }
+export function convertVariableDeclarationAssignment(line: string): string | null {
+  const match = line.match(VARIABLE_DECLARATION_ASSIGNMENT);
+  if (!match) return null;
   
-  const sized = s.match(PATTERNS.ARRAY_SIZED);
-  if (sized) {
-    return { 
-      code: `${i}DECLARE ${sized[2]} : ARRAY[${sized[3]}] OF ${sized[1].toUpperCase()}`, 
-      block: null, 
-      changed: true 
-    };
-  }
+  const type = match[1].trim();
+  const variableName = match[2].trim();
+  const value = match[3].trim();
   
-  return { code: '', block: null, changed: false };
-};
-
-export const declarationConverters = {
-  constDecl,
-  varDecl,
-  arrayDecl,
-};
+  // Convert to IB pseudocode format
+  return `${variableName.toUpperCase()} ← ${toIBPseudocode(value)}`;
+}

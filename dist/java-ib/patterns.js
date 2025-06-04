@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DECREMENT = exports.INCREMENT = exports.WHILE_LOOP = exports.FOR_LOOP = exports.STRING_ASSIGNMENT = exports.LOGICAL_OPERATION_UNARY_NOT = exports.LOGICAL_OPERATION_BINARY = exports.IF_ELSE_STATEMENT = exports.IF_STATEMENT = exports.SYSTEM_OUT_PRINTLN = exports.VARIABLE_DECLARATION_ASSIGNMENT = void 0;
+exports.VARIABLE_DECLARATION_ASSIGNMENT = /^\s*(int|String|boolean)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+);\s*$/;
+exports.SYSTEM_OUT_PRINTLN = /^\s*System\.out\.println\((.*)\);\s*$/;
+exports.IF_STATEMENT = /^\s*if\s*\((.*)\)\s*\{\s*([\s\S]*?)\s*\}$/m;
+exports.IF_ELSE_STATEMENT = /^\s*if\s*\((.*)\)\s*\{\s*([\s\S]*?)\s*\}\s*else\s*\{\s*([\s\S]*?)\s*\}$/m;
+exports.LOGICAL_OPERATION_BINARY = /^\s*boolean\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+?)\s*([&|]{2})\s*(.+);\s*$/;
+exports.LOGICAL_OPERATION_UNARY_NOT = /^\s*boolean\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*!\s*(.+);\s*$/;
+exports.STRING_ASSIGNMENT = /^\s*String\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+);\s*$/;
+exports.FOR_LOOP = /^\s*for\s*\(\s*int\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(\d+)\s*;\s*\1\s*<\s*(\d+)\s*;\s*\1\+\+\s*\)\s*\{\s*([\s\S]*?)\s*\}$/m;
+exports.WHILE_LOOP = /^\s*while\s*\((.*)\)\s*\{\s*([\s\S]*?)\s*\}$/m;
+exports.INCREMENT = /^\s*([a-zA-Z_][a-zA-Z0-9_]*)\+\+;\s*$/;
+exports.DECREMENT = /^\s*([a-zA-Z_][a-zA-Z0-9_]*)--;\s*$/;

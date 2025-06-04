@@ -1,120 +1,239 @@
-import { ParseResult } from '../types';
-import { PATTERNS } from '../patterns';
-import { cond } from '../utils';
+import { IF_STATEMENT, IF_ELSE_STATEMENT, FOR_LOOP, WHILE_LOOP } from '../patterns';
+import { Java2IB } from '../index'; // Import Java2IB for recursive parsing
+import { toIBPseudocode } from '../utils';
 
-export const ifBlock = (s: string, i: string): ParseResult => {
-  const m = s.match(PATTERNS.IF);
-  return m 
-    ? { code: `${i}IF ${cond(m[1])} THEN`, block: 'if', changed: true }
-    : { code: '', block: null, changed: false };
-};
+// Helper function to indent lines
+function indent(text: string, level: number = 1): string {
+  const indentation = '    '.repeat(level);
+  return text.split('\n').map(line => `${indentation}${line}`).join('\n');
+}
 
-export const elifBlock = (s: string, i: string): ParseResult => {
-  const m = s.match(PATTERNS.ELIF);
-  return m 
-    ? { code: `${i}ELSE IF ${cond(m[1])} THEN`, block: 'elif', changed: true }
-    : { code: '', block: null, changed: false };
-};
+interface ConversionResult {
+  pseudocode: string;
+  endIndex: number;
+}
 
-export const elifOnlyBlock = (s: string, i: string): ParseResult => {
-  const m = s.match(PATTERNS.ELIF_ONLY);
-  return m 
-    ? { code: `${i}ELSE IF ${cond(m[1])} THEN`, block: 'elif', changed: true }
-    : { code: '', block: null, changed: false };
-};
+export function convertIfStatement(javaCodeLines: string[], startIndex: number, parser: Java2IB): ConversionResult | null {
+  const blockLines: string[] = [];
+  let openBraces = 0;
+  let endIndex = startIndex;
+  let firstLineMatch = false;
 
-export const elseBlock = (s: string, i: string): ParseResult => {
-  return PATTERNS.ELSE.test(s) 
-    ? { code: `${i}ELSE`, block: 'else', changed: true }
-    : { code: '', block: null, changed: false };
-};
+  for (let i = startIndex; i < javaCodeLines.length; i++) {
+    const line = javaCodeLines[i];
+    const trimmedLine = line.trim();
 
-export const elseOnlyBlock = (s: string, i: string): ParseResult => {
-  return PATTERNS.ELSE_ONLY.test(s) 
-    ? { code: `${i}ELSE`, block: 'else', changed: true }
-    : { code: '', block: null, changed: false };
-};
+    if (i === startIndex) {
+        // Check if the line starts with 'if' instead of using the full pattern
+        const ifCheck = /^\s*if\s*\(/.test(trimmedLine);
+        if (ifCheck) {
+            firstLineMatch = true;
+        } else {
+            return null; // Not an if statement starting at this line
+        }
+    }
 
-export const forCount = (s: string, i: string): ParseResult => {
-  const m = s.match(PATTERNS.FOR_COUNT);
-  if (!m) return { code: '', block: null, changed: false };
-  
-  const start = +m[2];
-  const operator = m[3];
-  const endValue = m[4];
-  
-  // Check if endValue is a number or variable
-  const isNumber = /^\d+$/.test(endValue);
-  let end: string;
-  
-  if (isNumber) {
-    const endNum = +endValue;
-    end = endNum.toString(); // FOR ... TO ... DO includes the end value
-  } else {
-    // For variables, keep the variable name as is
-    end = endValue;
+    if (firstLineMatch) {
+        blockLines.push(line);
+        if (trimmedLine.includes('{')) {
+            openBraces += (trimmedLine.match(/\{/g) || []).length;
+        }
+        if (trimmedLine.includes('}')) {
+            openBraces -= (trimmedLine.match(/\}/g) || []).length;
+        }
+        if (openBraces === 0 && blockLines.length > 0) {
+            endIndex = i + 1;
+            break;
+        }
+    }
   }
-  
-  return {
-    code: `${i}FOR ${m[1]} FROM ${start} TO ${end} DO`,
-    block: 'for',
-    changed: true
-  };
-};
 
-export const forEach = (s: string, i: string): ParseResult => {
-  const m = s.match(PATTERNS.FOR_EACH);
-  return m 
-    ? { code: `${i}FOR EACH ${m[1]} IN ${m[2]} DO`, block: 'for', changed: true }
-    : { code: '', block: null, changed: false };
-};
+  if (blockLines.length === 0 || !firstLineMatch) {
+    return null;
+  }
 
-export const whileBlock = (s: string, i: string): ParseResult => {
-  const m = s.match(PATTERNS.WHILE);
-  return m 
-    ? { code: `${i}WHILE ${cond(m[1])} DO`, block: 'while', changed: true }
-    : { code: '', block: null, changed: false };
-};
+  const javaBlock = blockLines.join('\n');
+  const match = javaBlock.match(IF_STATEMENT);
 
-export const doBlock = (s: string, i: string): ParseResult => {
-  return PATTERNS.DO.test(s) 
-    ? { code: `${i}REPEAT`, block: 'repeat', changed: true }
-    : { code: '', block: null, changed: false };
-};
+  if (match) {
+    const condition = match[1].trim();
+    const body = match[2].trim();
+    const ibBody = parser.parse(body);
+    return {
+      pseudocode: `if ${toIBPseudocode(condition)} then\n${indent(ibBody)}\nend if`,
+      endIndex: endIndex,
+    };
+  }
+  return null;
+}
 
-export const doWhileBlock = doBlock;
+export function convertIfElseStatement(javaCodeLines: string[], startIndex: number, parser: Java2IB): ConversionResult | null {
+  const blockLines: string[] = [];
+  let openBraces = 0;
+  let endIndex = startIndex;
+  let firstLineMatch = false;
 
-export const tryBlock = (s: string, i: string): ParseResult => {
-  return PATTERNS.TRY.test(s) 
-    ? { code: `${i}TRY`, block: 'try', changed: true }
-    : { code: '', block: null, changed: false };
-};
+  for (let i = startIndex; i < javaCodeLines.length; i++) {
+    const line = javaCodeLines[i];
+    const trimmedLine = line.trim();
 
-export const catchBlock = (s: string, i: string): ParseResult => {
-  const m = s.match(PATTERNS.CATCH);
-  return m 
-    ? { code: `${i}CATCH ${m[1]}`, block: 'catch', changed: true }
-    : { code: '', block: null, changed: false };
-};
+    if (i === startIndex) {
+        // Check if the line starts with 'if' and contains 'else' later in the code
+        const ifCheck = /^\s*if\s*\(/.test(trimmedLine);
+        if (ifCheck) {
+            firstLineMatch = true;
+        } else {
+            return null; // Not an if-else statement starting at this line
+        }
+    }
 
-export const finallyBlock = (s: string, i: string): ParseResult => {
-  return PATTERNS.FINALLY.test(s) 
-    ? { code: `${i}FINALLY`, block: 'finally', changed: true }
-    : { code: '', block: null, changed: false };
-};
+    if (firstLineMatch) {
+        blockLines.push(line);
+        if (trimmedLine.includes('{')) {
+            openBraces += (trimmedLine.match(/\{/g) || []).length;
+        }
+        if (trimmedLine.includes('}')) {
+            openBraces -= (trimmedLine.match(/\}/g) || []).length;
+        }
+        if (openBraces === 0 && blockLines.length > 0) {
+            endIndex = i + 1;
+            break;
+        }
+    }
+  }
 
-export const controlFlowConverters = {
-  ifBlock,
-  elifBlock,
-  elifOnlyBlock,
-  elseBlock,
-  elseOnlyBlock,
-  forCount,
-  forEach,
-  whileBlock,
-  doBlock,
-  doWhileBlock,
-  tryBlock,
-  catchBlock,
-  finallyBlock,
-};
+  if (blockLines.length === 0 || !firstLineMatch) {
+    return null;
+  }
+
+  const javaBlock = blockLines.join('\n');
+  const match = javaBlock.match(IF_ELSE_STATEMENT);
+
+  if (match) {
+    const condition = match[1].trim();
+    const ifBody = match[2].trim();
+    const elseBody = match[3].trim();
+    const ibIfBody = parser.parse(ifBody);
+    const ibElseBody = parser.parse(elseBody);
+    return {
+      pseudocode: `if ${toIBPseudocode(condition)} then\n${indent(ibIfBody)}\nelse\n${indent(ibElseBody)}\nend if`,
+      endIndex: endIndex,
+    };
+  }
+  return null;
+}
+
+export function convertForLoop(javaCodeLines: string[], startIndex: number, parser: Java2IB): ConversionResult | null {
+  const blockLines: string[] = [];
+  let openBraces = 0;
+  let endIndex = startIndex;
+  let firstLineMatch = false;
+
+  for (let i = startIndex; i < javaCodeLines.length; i++) {
+    const line = javaCodeLines[i];
+    const trimmedLine = line.trim();
+
+    if (i === startIndex) {
+        // Check if the line starts with 'for' instead of using the full pattern
+        const forCheck = /^\s*for\s*\(/.test(trimmedLine);
+        if (forCheck) {
+            firstLineMatch = true;
+        } else {
+            return null; // Not a for loop starting at this line
+        }
+    }
+
+    if (firstLineMatch) {
+        blockLines.push(line);
+        if (trimmedLine.includes('{')) {
+            openBraces += (trimmedLine.match(/\{/g) || []).length;
+        }
+        if (trimmedLine.includes('}')) {
+            openBraces -= (trimmedLine.match(/\}/g) || []).length;
+        }
+        if (openBraces === 0 && blockLines.length > 0) {
+            endIndex = i + 1;
+            break;
+        }
+    }
+  }
+
+  if (blockLines.length === 0 || !firstLineMatch) {
+    return null;
+  }
+
+  const javaBlock = blockLines.join('\n');
+  const match = javaBlock.match(FOR_LOOP);
+
+  if (match) {
+    const variable = match[1].trim();
+    const start = match[2].trim();
+    const end = match[3].trim();
+    const body = match[4].trim();
+    const ibBody = parser.parse(body);
+    
+    // IB pseudocode uses inclusive range, so we need to subtract 1 from the end value
+    const endValue = parseInt(end) - 1;
+    
+    return {
+      pseudocode: `loop ${variable.toUpperCase()} from ${start} to ${endValue}\n${indent(ibBody)}\nend loop`,
+      endIndex: endIndex,
+    };
+  }
+  return null;
+}
+
+export function convertWhileLoop(javaCodeLines: string[], startIndex: number, parser: Java2IB): ConversionResult | null {
+  const blockLines: string[] = [];
+  let openBraces = 0;
+  let endIndex = startIndex;
+  let firstLineMatch = false;
+
+  for (let i = startIndex; i < javaCodeLines.length; i++) {
+    const line = javaCodeLines[i];
+    const trimmedLine = line.trim();
+
+    if (i === startIndex) {
+        // Check if the line starts with 'while' instead of using the full pattern
+        const whileCheck = /^\s*while\s*\(/.test(trimmedLine);
+        if (whileCheck) {
+            firstLineMatch = true;
+        } else {
+            return null; // Not a while loop starting at this line
+        }
+    }
+
+    if (firstLineMatch) {
+        blockLines.push(line);
+        if (trimmedLine.includes('{')) {
+            openBraces += (trimmedLine.match(/\{/g) || []).length;
+        }
+        if (trimmedLine.includes('}')) {
+            openBraces -= (trimmedLine.match(/\}/g) || []).length;
+        }
+        if (openBraces === 0 && blockLines.length > 0) {
+            endIndex = i + 1;
+            break;
+        }
+    }
+  }
+
+  if (blockLines.length === 0 || !firstLineMatch) {
+    return null;
+  }
+
+  const javaBlock = blockLines.join('\n');
+  const match = javaBlock.match(WHILE_LOOP);
+
+  if (match) {
+    const condition = match[1].trim();
+    const body = match[2].trim();
+    const ibBody = parser.parse(body);
+    
+    return {
+      pseudocode: `loop while ${toIBPseudocode(condition)}\n${indent(ibBody)}\nend loop`,
+      endIndex: endIndex,
+    };
+  }
+  return null;
+}

@@ -1,24 +1,24 @@
-import { OP } from './constants';
+export function toIBPseudocode(name: string): string {
+  // Check if the name is a string literal (starts and ends with a quote)
+  if (name.startsWith('"') && name.endsWith('"')) {
+    return name; // Return string literals as is
+  }
 
-export const leadingWhitespace = (s: string): string => {
-  return s.match(/^(\s*)/)?.[1] ?? "";
-};
+  // Handle boolean literals
+  if (name.toLowerCase() === 'true') return 'TRUE';
+  if (name.toLowerCase() === 'false') return 'FALSE';
 
-export const extractLoopVar = (s: string): string => {
-  const m = s.match(/for\s*\(.*?(\w+)\+\+/);
-  return m ? m[1] : '';
-};
+  // Handle comparison operators
+  name = name.replace(/==/g, '=');
+  name = name.replace(/!=/g, '≠');
+  name = name.replace(/\//g, ' DIV ');
+  name = name.replace(/%/g, ' MOD ');
 
-export const cond = (expr: string): string => {
-  return expr
-    .replace(/==/g, OP.EQ)
-    .replace(/!=/g, OP.NE)
-    .replace(/<=/g, OP.LE)
-    .replace(/>=/g, OP.GE)
-    .replace(/&&/g, ` ${OP.AND} `)
-    .replace(/\|\|/g, ` ${OP.OR} `)
-    .replace(/!([A-Za-z_\(])/g, `${OP.NOT} $1`)
-    .replace(/\btrue\b/gi, "TRUE")
-    .replace(/\bfalse\b/gi, "FALSE")
-    .replace(/Math\.pow\(([^,]+),\s*([^\)]+)\)/g, "$1 ^ $2");
-};
+  // Handle logical operators
+  name = name.replace(/&&/g, ' AND ');
+  name = name.replace(/\|\|/g, ' OR ');
+  name = name.replace(/!/g, 'NOT ');
+
+  // If it's not a string literal, convert it to uppercase
+  return name.toUpperCase();
+}
