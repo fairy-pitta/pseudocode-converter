@@ -2,10 +2,12 @@ export const VARIABLE_DECLARATION_ASSIGNMENT = /^\s*(int|String|boolean)\s+([a-z
 export const SYSTEM_OUT_PRINTLN = /^\s*System\.out\.println\((.*)\);\s*$/;
 export const IF_STATEMENT = /^\s*if\s*\((.*)\)\s*\{\s*([\s\S]*?)\s*\}$/m;
 export const IF_ELSE_STATEMENT = /^\s*if\s*\((.*)\)\s*\{\s*([\s\S]*?)\s*\}\s*else\s*\{\s*([\s\S]*?)\s*\}$/m;
-export const LOGICAL_OPERATION_BINARY = /^\s*boolean\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+?)\s*([&|]{2})\s*(.+);\s*$/;
+export const LOGICAL_OPERATION_BINARY = /^\s*boolean\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+?)\s*([&|]{2})\s*(.+?);\s*$/;
 export const LOGICAL_OPERATION_UNARY_NOT = /^\s*boolean\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*!\s*(.+);\s*$/;
 export const STRING_ASSIGNMENT = /^\s*String\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+);\s*$/;
 export const FOR_LOOP = /^\s*for\s*\(\s*int\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(\d+)\s*;\s*\1\s*<\s*(\d+)\s*;\s*\1\+\+\s*\)\s*\{\s*([\s\S]*?)\s*\}$/m;
 export const WHILE_LOOP = /^\s*while\s*\((.*)\)\s*\{\s*([\s\S]*?)\s*\}$/m;
 export const INCREMENT = /^\s*([a-zA-Z_][a-zA-Z0-9_]*)\+\+;\s*$/;
 export const DECREMENT = /^\s*([a-zA-Z_][a-zA-Z0-9_]*)--;\s*$/;
+export const ARITHMETIC_OPERATION = /^\s*(?:(?:int|double|float)\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*([a-zA-Z_][a-zA-Z0-9_]*|\d+(?:\.\d+)?)\s*([+\-*/%])\s*([a-zA-Z_][a-zA-Z0-9_]*|\d+(?:\.\d+)?);\s*$/;
+export const COMPARISON_OPERATION = /^\s*boolean\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*\((.+?)\s*(==|!=|>=|<=|>|<)\s*(.+?)\);\s*$/;

@@ -327,7 +327,7 @@ const Converter = () => {
     const options = { onUnsupportedSyntax: handleUnsupportedSyntax };
     
     if (parserType === 'ib') {
-      const parser = new Java2IB(options);
+      const parser = new Java2IB();
       return parser.parse(sourceCode);
     } else {
       const parser = new Java2IG(options);

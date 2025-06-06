@@ -20,6 +20,10 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
     },
+    onConsoleLog(log: string, type: 'stdout' | 'stderr') {
+      console.log(`[${type}] ${log}`);
+      return false; // Vitest's default console output is suppressed
+    },
   },
   resolve: {
     alias: {
