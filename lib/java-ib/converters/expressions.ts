@@ -98,6 +98,23 @@ export function convertArithmeticOperation(line: string): string | null {
     ibOperator = 'mod';
   }
 
+  // 複雑な式（括弧を含む式など）の場合
+  if (leftOperand.includes('(') || rightOperand.includes('(') || 
+      leftOperand.includes('/') || rightOperand.includes('/') || 
+      leftOperand.includes('%') || rightOperand.includes('%')) {
+    // 式全体をExpressionParserで解析
+    const expression = `${leftOperand} ${operator} ${rightOperand}`;
+    try {
+      const parsedExpression = ExpressionParser.parse(expression);
+      // 最終的な結果で / と % を div と mod に置換
+      const finalExpression = parsedExpression.replace(/\//g, ' div ').replace(/%/g, ' mod ');
+      return `${variableName.toUpperCase()} ← ${finalExpression}`;
+    } catch (error) {
+      console.warn(`ExpressionParser failed for: ${expression}, falling back to simple conversion`);
+    }
+  }
+
+  // 単純な式の場合は従来の方法で変換
   // 変数名を大文字に変換
   const leftVar = leftOperand.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/) ? leftOperand.toUpperCase() : leftOperand;
   const rightVar = rightOperand.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/) ? rightOperand.toUpperCase() : rightOperand;

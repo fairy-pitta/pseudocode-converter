@@ -26,7 +26,6 @@ export class ExpressionParser {
       return 'FALSE';
     }
 
-
     try {
       // 式を一時的なJavaプログラムの文脈に配置して解析
       const wrappedExpression = `
@@ -91,49 +90,94 @@ export class ExpressionParser {
 
         console.log('[ExpressionParser.parse] BlockStatement structure (wrapped with System.out.println):', util.inspect(blockStatement, { showHidden: false, depth: 5, colors: false }));
 
-        let expressionAst;
+        let expressionAst: any;
+        let statementExpression: any;
 
-        // blockStatementから適切にstatementを取得
+        // 新しいアプローチ: 発見された正しいAST構造に基づく
+        // StatementContext → ExpressionContext → MethodCallContext → ArgumentsContext
         const statement = blockStatement.statement && blockStatement.statement();
-        if (statement && statement._statementExpression) {
-          console.log('[ExpressionParser.parse] Attempting to extract from statementExpression within System.out.println wrapper');
-          const statementExpression = statement._statementExpression;
-          if (statementExpression && typeof statementExpression.expression === 'function') {
-            // System.out.println(expression) の場合、expression() は methodInvocation
-            // その引数が実際の式になる
-            const exprNode = statementExpression.expression();
-            const methodInvocation = Array.isArray(exprNode) ? exprNode[0] : exprNode;
-            if (methodInvocation && typeof methodInvocation.methodCall === 'function') {
-              const methodCallResult = methodInvocation.methodCall();
-              if (methodCallResult && typeof methodCallResult.arguments === 'function') {
-                const argumentsResult = methodCallResult.arguments();
-                if (argumentsResult && typeof argumentsResult.expressionList === 'function') {
-                  const expressionList = argumentsResult.expressionList();
-                  if (expressionList && typeof expressionList.expression === 'function') {
-                    const argListExpression = expressionList.expression();
-                    expressionAst = Array.isArray(argListExpression) ? argListExpression[0] : argListExpression;
-                    console.log('[ExpressionParser.parse] Extracted expression from System.out.println wrapper:', util.inspect(expressionAst, { showHidden: false, depth: 5, colors: false }));
+        if (statement) {
+          console.log('[ExpressionParser.parse] StatementContext found, searching for ExpressionContext');
+          
+          // StatementContextの子要素からExpressionContextを探す
+          if ((statement as any).children) {
+            for (let i = 0; i < (statement as any).children.length; i++) {
+              const child = (statement as any).children[i];
+              if (child.constructor.name === 'ExpressionContext') {
+                console.log(`[ExpressionParser.parse] Found ExpressionContext at index ${i}`);
+                
+                // ExpressionContextの子要素からMethodCallContextを探す
+                if ((child as any).children) {
+                  for (let j = 0; j < (child as any).children.length; j++) {
+                    const grandChild = (child as any).children[j];
+                    if (grandChild.constructor.name === 'MethodCallContext') {
+                      console.log(`[ExpressionParser.parse] Found MethodCallContext: "${grandChild.text}"`);
+                      
+                      // MethodCallContextの2番目の子要素がArgumentsContext
+                      if ((grandChild as any).children && (grandChild as any).children.length > 1) {
+                        const argumentsContext = (grandChild as any).children[1];
+                        console.log(`[ExpressionParser.parse] ArgumentsContext: "${argumentsContext.text}"`);
+                        
+                        // ArgumentsContextから式を抽出
+                        if (argumentsContext && typeof argumentsContext.expressionList === 'function') {
+                          const expressionList = argumentsContext.expressionList();
+                          if (expressionList && typeof expressionList.expression === 'function') {
+                            const argExpression = expressionList.expression();
+                            expressionAst = Array.isArray(argExpression) ? argExpression[0] : argExpression;
+                            
+                            console.log('[ExpressionParser.parse] Successfully extracted expression:');
+                            console.log('[ExpressionParser.parse] text:', expressionAst ? expressionAst.text : 'undefined');
+                            console.log('[ExpressionParser.parse] type:', expressionAst ? expressionAst.constructor.name : 'undefined');
+                            break;
+                          }
+                        }
+                      }
+                    }
                   }
                 }
+                break;
               }
-            } else if (methodInvocation && typeof methodInvocation.primary === 'function') {
-              // もし直接 primary() で式が取れる場合 (例: 単純なリテラルや変数)
-              expressionAst = methodInvocation.primary(); 
-              console.log('[ExpressionParser.parse] Extracted primary expression from System.out.println wrapper:', util.inspect(expressionAst, { showHidden: false, depth: 5, colors: false }));
-            } else {
-              // それでもダメなら、statementExpression.expression() 自体を試す
-              expressionAst = statementExpression.expression();
-              console.log('[ExpressionParser.parse] Fallback to statementExpression.expression() in System.out.println wrapper:', util.inspect(expressionAst, { showHidden: false, depth: 5, colors: false }));
             }
           }
-        } else if (blockStatement && (blockStatement as any)._statementExpression) {
+        }
+          
+        // フォールバック: 従来のロジック
+        if (!expressionAst && statementExpression && typeof statementExpression.expression === 'function') {
+          console.log('[ExpressionParser.parse] フォールバック: 従来のロジックを試行');
+          const exprNode = statementExpression.expression();
+          const methodInvocation = Array.isArray(exprNode) ? exprNode[0] : exprNode;
+          if (methodInvocation && typeof methodInvocation.methodCall === 'function') {
+            const methodCallResult = methodInvocation.methodCall();
+            if (methodCallResult && typeof methodCallResult.arguments === 'function') {
+              const argumentsResult = methodCallResult.arguments();
+              if (argumentsResult && typeof argumentsResult.expressionList === 'function') {
+                const expressionList = argumentsResult.expressionList();
+                if (expressionList && typeof expressionList.expression === 'function') {
+                  const argListExpression = expressionList.expression();
+                  expressionAst = Array.isArray(argListExpression) ? argListExpression[0] : argListExpression;
+                  console.log('[ExpressionParser.parse] Extracted expression from System.out.println wrapper (fallback):', util.inspect(expressionAst, { showHidden: false, depth: 5, colors: false }));
+                }
+              }
+            }
+          } else if (methodInvocation && typeof methodInvocation.primary === 'function') {
+            // もし直接 primary() で式が取れる場合 (例: 単純なリテラルや変数)
+            expressionAst = methodInvocation.primary(); 
+            console.log('[ExpressionParser.parse] Extracted primary expression from System.out.println wrapper (fallback):', util.inspect(expressionAst, { showHidden: false, depth: 5, colors: false }));
+          } else {
+            // それでもダメなら、statementExpression.expression() 自体を試す
+            expressionAst = statementExpression.expression();
+            console.log('[ExpressionParser.parse] Fallback to statementExpression.expression() in System.out.println wrapper:', util.inspect(expressionAst, { showHidden: false, depth: 5, colors: false }));
+          }
+        }
+        
+        if (!expressionAst && (blockStatement as any)._statementExpression) {
           // こちらは blockStatement 直下に statementExpression がある場合 (以前のロジックに近い)
           console.log('[ExpressionParser.parse] Attempting to extract from direct statementExpression (should not happen with System.out.println wrapper)');
           const statementExpressionNode = (blockStatement as any)._statementExpression;
-            if (statementExpressionNode && typeof statementExpressionNode.expression === 'function') {
-                expressionAst = statementExpressionNode.expression();
-                console.log('[ExpressionParser.parse] Extracted from direct statementExpression:', util.inspect(expressionAst, { showHidden: false, depth: 5, colors: false }));
-            }
+          if (statementExpressionNode && typeof statementExpressionNode.expression === 'function') {
+            expressionAst = statementExpressionNode.expression();
+            console.log('[ExpressionParser.parse] Extracted from direct statementExpression:', util.inspect(expressionAst, { showHidden: false, depth: 5, colors: false }));
+          }
         }
 
         // 元の変数宣言からの抽出ロジックもフォールバックとして残す (ただし、ラップ方法が変わったので期待薄)
@@ -163,23 +207,23 @@ export class ExpressionParser {
         const transformer = new Transformer();
         const result = transformer.transform(expressionAst);
         console.log('[ExpressionParser.parse] Transformed result:', result);
-      return result;
-    } catch (error) {
-      console.error(`[ExpressionParser.parse] Error during parsing expression: ${expression}`);
-      console.error('[ExpressionParser.parse] Error details:', error);
+        return result;
+      } catch (error) {
+        console.error(`[ExpressionParser.parse] Error during parsing expression: ${expression}`);
+        console.error('[ExpressionParser.parse] Error details:', error);
+        // エラーを再スローして、呼び出し元で処理できるようにする
+        throw error;
+      }
+    } catch (outerError: any) {
+      // この catch は parseJavaAst や、その前の処理でエラーが起きた場合
+      console.error(`[ExpressionParser.parse] Error in outer try block for expression: ${expression}`);
+      console.error('[ExpressionParser.parse] Outer error details:', outerError);
       // エラーを再スローして、呼び出し元で処理できるようにする
-      throw error;
+      throw outerError;
     }
-  } catch (outerError) {
-    // この catch は parseJavaAst や、その前の処理でエラーが起きた場合
-    console.error(`[ExpressionParser.parse] Error in outer try block for expression: ${expression}`);
-    console.error('[ExpressionParser.parse] Outer error details:', outerError);
-    // エラーを再スローして、呼び出し元で処理できるようにする
-    throw outerError;
   }
-}
-  
-/**
+
+  /**
    * 条件式をIB擬似コードに変換する
    * 条件式は括弧で囲まれていることが多いため、括弧を取り除いて処理する
    * @param condition 変換する条件式

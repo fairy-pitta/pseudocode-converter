@@ -136,11 +136,13 @@ export class Transformer {
           if (expressions.length >= 2) {
             const left: string = expressions[0].accept(visitor);
             const right: string = expressions[1].accept(visitor);
-            return `${left} <- ${right}`;
+            // 代入式の右辺にも演算子変換を適用
+            const processedRight = right.replace(/\//g, ' div ').replace(/%/g, ' mod ');
+            return `${left} ← ${processedRight}`;
           }
         }
         
-        // 算術演算子の処理
+        // 比較演算子の処理
         const expressions = ctx.expression();
         if (expressions && expressions.length >= 2) {
           const left = expressions[0].accept(visitor);
@@ -148,40 +150,93 @@ export class Transformer {
           
           // 演算子を取得
           const text = ctx.text;
+          
+          // 比較演算子の変換
+          if (text.includes('==')) {
+            return `(${left} = ${right})`;
+          }
+          if (text.includes('!=')) {
+            return `(${left} ≠ ${right})`;
+          }
+          if (text.includes('>=')) {
+            return `(${left} >= ${right})`;
+          }
+          if (text.includes('<=')) {
+            return `(${left} <= ${right})`;
+          }
+          if (text.includes('>') && !text.includes('>=')) {
+            return `(${left} > ${right})`;
+          }
+          if (text.includes('<') && !text.includes('<=')) {
+            return `(${left} < ${right})`;
+          }
+          
+          // 論理演算子の変換
+          if (text.includes('&&')) {
+            return `${left} AND ${right}`;
+          }
+          if (text.includes('||')) {
+            return `${left} OR ${right}`;
+          }
+          
+          // 除算と剰余の処理を強化
           if (text.includes('/')) {
-            return `${left} div ${right}`;
+            // 複雑な式の中の除算演算子も変換
+            const processedRight = right.replace(/\//g, ' div ').replace(/%/g, ' mod ');
+            return `${left} div ${processedRight}`;
           }
           if (text.includes('%')) {
-            return `${left} mod ${right}`;
+            // 複雑な式の中の剰余演算子も変換
+            const processedRight = right.replace(/\//g, ' div ').replace(/%/g, ' mod ');
+            return `${left} mod ${processedRight}`;
           }
+          
+          // 他の演算子の処理
           if (text.includes('+')) {
-            return `${left} + ${right}`;
+            // 複雑な式の中の演算子も変換
+            const processedRight = right.replace(/\//g, ' div ').replace(/%/g, ' mod ');
+            return `${left} + ${processedRight}`;
           }
           if (text.includes('-')) {
-            return `${left} - ${right}`;
+            // 複雑な式の中の演算子も変換
+            const processedRight = right.replace(/\//g, ' div ').replace(/%/g, ' mod ');
+            return `${left} - ${processedRight}`;
           }
           if (text.includes('*')) {
-            return `${left} * ${right}`;
+            // 複雑な式の中の演算子も変換
+            const processedRight = right.replace(/\//g, ' div ').replace(/%/g, ' mod ');
+            return `${left} * ${processedRight}`;
           }
+        }
+        
+        // 単項演算子の処理（NOT演算子）
+        if (ctx.text.startsWith('!')) {
+          const operand = ctx.text.substring(1);
+          return `NOT ${operand.toUpperCase()}`;
         }
         
         // 単一の式の場合、テキストに演算子変換を適用
         let text = ctx.text;
+        
+        // 括弧内の演算子も変換するために、正規表現を強化
         text = text.replace(/\//g, ' div ').replace(/%/g, ' mod ');
         if (text !== ctx.text) {
           return text;
         }
         
         // プライマリ式の処理
-        if (ctx.primary()) {
-          return ctx.primary()!.accept(visitor);
+        const primary = ctx.primary();
+        if (primary) {
+          return primary.accept(visitor);
         }
         
         // メソッド呼び出しの処理
-        if (ctx.methodCall()) {
-          return ctx.methodCall()!.accept(visitor);
+        const methodCall = ctx.methodCall();
+        if (methodCall) {
+          return methodCall.accept(visitor);
         }
         
+        // 他のケースの処理
         return ctx.text;
       },
       visitLiteral: (ctx: LiteralContext) => {
