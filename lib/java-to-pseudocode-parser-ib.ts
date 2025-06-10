@@ -1,1 +1,0 @@
-export { Java2IB } from './java-ib';
