@@ -1,7 +1,4 @@
-# 2025-06-09 Java → IB Pseudocode 変換基盤設計書 **CST Edition v4 (Detailed)**
-
-> **Status:** Draft · *Last updated: 2025‑06‑10*
-> **Maintainer:** Jasmine Ong Jie Min \<jasmine\@fairy‑pitta.dev>
+# Java → IB Pseudocode 変換基盤設計書 v2.0
 
 ---
 
@@ -9,44 +6,25 @@
 
 | 項目       | 内容                                                                                                                           |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **目的**   | Java ソースを **tree‑sitter‑java** で CST 化し、Cambridge IB 準拠の読みやすい擬似コードにワンコマンド変換する。                                               |
-| **成果物**  | *ライブラリ* **`java-to-ib`**、*CLI* **`j2ib`**、*VS Code Extension* **`vscode-java-to-ib`**、*Web Playground* (Monaco + WASM build) |
-| **コア要件** | 100 % 自動化 / 完全離線動作 / ソース位置追跡 / 英語・日本語コメントを保持                                                                                 |
-| **非目標**  | 型推論、意味解析、Java 17+ 新構文 (record pattern etc.) はベータ扱い                                                                           |
+| **目的**   | Java ソースを **正規表現ベースパーサー** で解析し、Cambridge IB 準拠の読みやすい擬似コードに変換する。                                               |
+| **成果物**  | *ライブラリ* **`java-to-ib`** - 軽量で実用的な変換ツール                                                                                 |
+| **非目標**  | 完全なJava構文解析、型推論、意味解析、複雑な最適化                                                                           |
+| **設計思想** | **実用性重視**: 教育現場で実際に使われるJavaコードパターンに特化した変換 |
 
 ---
 
 ## 2️⃣ ディレクトリ構成
 
 ````
-java-to-ib/
-├─ src/
-│  ├─ cst/
-│  │   ├─ loader.ts          # tree‑sitter 初期化
-│  │   └─ helpers.ts         # Node util (fieldFor/hasChild)
-│  ├─ visitor/
-│  │   ├─ base.ts            # Depth‑first generic visitor
-│  │   ├─ expressions.ts     # 式系ノード専用 visitor
-│  │   └─ statements.ts      # 文系ノード専用 visitor
-│  ├─ ir/
-│  │   ├─ types.ts           # IR 型定義
-│  │   ├─ builder.ts         # CST → IR 変換
-│  │   └─ printer.ts         # デバッグ用 pretty‑print
-│  ├─ emitter/
-│  │   ├─ pseudocode.ts      # メイン出力
-│  │   ├─ markdown.ts        # ```pcd ``` フェンス包み
-│  │   └─ html.ts            # Playground 用ハイライト出力
-│  ├─ cli.ts                 # Commander CLI
-│  └─ index.ts               # API surface
-├─ playground/               # Vite + Monaco demo
-├─ grammars/                 # tree‑sitter WASM + bindings
-├─ tests/
-│  ├─ fixture‑samples/*.java
-│  ├─ unit/visitor‑*.test.ts
-│  ├─ unit/emitter‑*.test.ts
-│  └─ e2e/*.test.ts
-└─ docs/
-   └─ spec.md                # 本ファイルコピー
+root/
+├─ lib/
+│  ├─ java-ib/                    # メインライブラリ
+│  │   ├─ constants.ts             # IB疑似コード定数・キーワード・演算子
+│  │   ├─ types.ts                 # 基本型定義
+│  │   ├─ parser.ts                # メインパーサー
+│  │   └─ index.ts                 # エクスポート
+│  └─ __tests__/
+│      └─ java-ib-parser.test.ts   # テストファイル
 ````
 
 ---
@@ -62,42 +40,27 @@ java-to-ib/
           +--------------------+
           |        CST         |
           +--------------------+
-                     │ visitor
-      (B) traverse  ▼
-          +--------------------+
-          |      IR Builder    |
-          +--------------------+
                      │
-      (C) emit      ▼  strategy pattern
+      (B) convert   ▼  直接変換
           +--------------------+
-          |    Pseudocode Out  |
-          +--------------------+
-                     │
-      (D) format    ▼  wrappers
-          +--------------------+
-          |  Markdown / HTML   |
+          |  IB Pseudocode     |
           +--------------------+
 ```
 
-### 3.1 IR 例
+### 3.1 変換例
 
-```jsonc
-{
-  "kind": "if",
-  "text": "IF x = 0 THEN",
-  "children": [
-    { "kind": "output", "text": "OUTPUT \"zero\"", "children": [], "loc": {"line":3,"column":4} }
-  ],
-  "loc": {"line":2,"column":0}
+**Java入力:**
+```java
+if (x == 0) {
+    System.out.println("zero");
 }
 ```
 
-結果擬似コード:
-
+**出力疑似コード:**
 ```
-IF x = 0 THEN
-    OUTPUT "zero"
-ENDIF
+if X = 0 then
+    output "zero"
+end if
 ```
 
 ---
@@ -121,20 +84,18 @@ ENDIF
 
 ### 4.3 クラス / メソッド宣言
 
-* `class_declaration` → `// CLASS <Name>` 行コメントのみ (処理本体は擬似コード対象外)。
+* `class_declaration` → 無視（擬似コード対象外）
 * `method_declaration`:
-    * `main` メソッド: 中身を走査し、擬似コードに変換。
-    * その他のメソッド: IB試験では手続きや関数も擬似コードで記述する場合があるため、限定的にサポートを検討。当面はコメント化する方針だが、将来的には `PROCEDURE <Name>() ... ENDPROCEDURE` や `FUNCTION <Name>() RETURNS <Type> ... ENDFUNCTION` のような形式への変換も視野に入れる。
+    * `main` メソッド: 中身を走査し、擬似コードに変換
+    * その他のメソッド: 無視
 
 ### 4.4 データ構造の変換
 
 | Java 要素             | IB 疑似コード                                  | 備考                                                                 |
 | --------------------- | ---------------------------------------------- | -------------------------------------------------------------------- |
-| 配列 (e.g., `int[] a`) | `A[index]` (変数名大文字化)                     | インデックスは0から。CSTからIRへの変換時に変数名とアクセス方法を変換。         |
-| 文字列 (`String`)       | `MYWORD = "text"` (変数名大文字化)             | 代入、比較、出力をサポート。                                                 |
-| `ArrayList<T>`        | `COLLECTION` (または具体的な名前)                 | `.addItem()`, `.resetNext()`, `.getNext()`, `.hasNext()`, `.isEmpty()` に対応するJavaメソッドとのマッピングを定義。例: `list.add()` → `COL.addItem()`, `iterator.hasNext()` → `COL.hasNext()` など。 |
-| `Stack<T>`            | `STACK` (または具体的な名前)                     | `.push()`, `.pop()`, `.isEmpty()` に対応。HL Only。                      |
-| `Queue<T>`, `Deque<T>` | `QUEUE` (または具体的な名前)                     | `.enqueue()` (e.g. `add()`, `offer()`), `.dequeue()` (e.g. `remove()`, `poll()`), `.isEmpty()` に対応。HL Only。 |
+| 配列 (e.g., `int[] a`) | `A[index]` (変数名大文字化)                     | 基本的な配列アクセスのみ対応         |
+| 文字列 (`String`)       | `MYWORD = "text"` (変数名大文字化)             | 基本的な文字列操作のみ対応                                                 |
+| その他のコレクション        | 対応しない                 | 複雑なデータ構造は変換対象外 |
 
 ### 4.5 識別子と演算子の変換
 
@@ -161,113 +122,167 @@ ENDIF
 
 * **For ループ**:
     * Cスタイル `for(int i=0; i<N; i++)`: `loop I from 0 to N-1`
-    * 拡張for `for(Type item : collection)`: `COLLECTION.resetNext() loop while COLLECTION.hasNext() ITEM = COLLECTION.getNext() ... end loop` のような形に展開。
-* **Repeat-Until ループ (Java `do-while`)**:
-    * `do { ... } while (condition);` → `loop ... until NOT (condition)` または `loop ... statements ... until condition` (IBの `UNTIL` はループ継続条件である点に注意し、Javaの `while` の終了条件と逆転させる必要があるか確認)
-* **Switch-Case**:
-    * Javaの `switch` 文を、IBの `CASE OF ... OTHERWISE ... ENDCASE` 構造にマッピングする。`break` の扱いに注意。
+    * 拡張for: 対応しない
+* **While ループ**:
+    * `while (condition)`: `loop while condition`
+* **If文**:
+    * `if (condition)`: `if condition then`
+* **Switch-Case**: 対応しない
 
 ### 4.7 コメントの扱い
 
-* Javaソース内の単行コメント (`//`) および複数行コメント (`/* ... */`) は、CSTからIR、そして最終的な擬似コードへと適切に伝播させ、可能な限り元の位置に近い場所に出力する。
+* Javaソース内のコメントは基本的に無視する（シンプルな実装のため）
 
 ### 4.8 エラーハンドリング (`try-catch`)
 
-* Javaの `try-catch-finally` 構造は、IB疑似コードには直接対応する構文がないため、以下の方針を検討:
-    * `try` ブロック内のコードは通常通り変換。
-    * `catch` ブロックや `finally` ブロックはコメントアウトするか、処理内容を簡略化してコメントとして記述。
-    * `ENDTRY` は設計書にあるが、具体的な出力形式を定義する。
+* `try-catch-finally` 構造は対応しない（変換対象外）
 
 ---
 
-## 5️⃣ Emitter アルゴリズム
+## 5️⃣ 実装アプローチ
+
+### 5.1 シンプルな変換処理
 
 ```ts
-function emit(ir: IR, indent = 0): string[] {
-  const pad = ' '.repeat(indent * 4);
-  const out: string[] = [];
-  out.push(pad + ir.text);
-  for (const child of ir.children) out.push(...emit(child, indent + 1));
-  if (needsTerminator(ir.kind)) {
-    const term = terminator(ir.kind);
-    out.push(pad + term);
+export function convertJavaToIB(javaCode: string): string {
+  // tree-sitter-javaでパース
+  const tree = parser.parse(javaCode);
+  
+  // CSTを直接走査して擬似コードに変換
+  return convertNode(tree.rootNode);
+}
+
+function convertNode(node: SyntaxNode): string {
+  switch (node.type) {
+    case 'if_statement':
+      return convertIfStatement(node);
+    case 'for_statement':
+      return convertForStatement(node);
+    case 'while_statement':
+      return convertWhileStatement(node);
+    case 'expression_statement':
+      return convertExpressionStatement(node);
+    default:
+      return convertChildren(node);
   }
-  return out;
 }
 ```
 
-`needsTerminator()` と `terminator()` は以下テーブルで自動決定。
+### 5.2 終端記号マッピング
 
-| kind                     | terminator         |
-| ------------------------ | ------------------ |
-| `if` / `elseif` / `else` | `ENDIF`            |
-| `for`                    | `NEXT <index>`     |
-| `while`                  | `ENDWHILE`         |
-| `repeat`                 | `UNTIL <condition>` | Javaの `do-while` に相当 |
-| `case` / `switch`        | `ENDCASE`          |
-| `try`                    | `ENDTRY`           |
+| Java構文 | IB疑似コード終端 |
+| -------- | --------------- |
+| `if` | `end if` |
+| `for` | `end loop` |
+| `while` | `end loop` |
 
 ---
 
-## 6️⃣ 性能指標
+## 6️⃣ 実装方針
 
-| 指標                    | 目標                               |
-| --------------------- | -------------------------------- |
-| 1,000 行の Java に対し変換時間 | < **80 ms** (M1 Pro)             |
-| メモリ使用量                | < **100 MB** peak                |
-| tree‑sitter パース失敗率    | < **0.1 %** (fixture 3,000 ファイル) |
-
-### 最適化ポイント
-
-* tree‑sitter の byte‑slice reuse を有効化 (`setTimeoutParsing(true)`).
-* Visitor で不要フィールドを早期 return。深さ 10 以上のパスをキャッシュ。
-* IR生成時に、IB仕様にないJava特有の構文要素（例：型宣言、アクセス修飾子など）は適切に無視またはコメント化するロジックを組み込む。
-* **ネスト構造の深さ制限**: VisitorパターンでCSTを走査する際、再帰呼び出しの深さを管理する。ネストが10階層を超えた場合は、それ以上の詳細な変換を試みず、`// ... deeply nested code ...` のようなコメントで省略するか、処理を中断して警告を出すことを検討する。これは無限ループや過度な複雑性を持つコードによる変換処理の停止を防ぐため。
+### 基本方針
+* シンプルで直接的な変換
+* 複雑な最適化は行わない
+* 基本的なJava構文のみサポート
+* エラーハンドリングは最小限
 
 --- 
 
 ## 7️⃣ テスト戦略
 
-* **単体テスト (`unit/`)**:
-    * `visitor-*.test.ts`: 各CSTノードタイプに対応するVisitorが正しくIRノードを生成するかをテスト。
-    * `emitter-*.test.ts`: 各IRノードタイプが正しく擬似コード文字列を生成するかをテスト。
-* **E2Eテスト (`e2e/`)**:
-    * `fixture-samples/*.java` にあるJavaソースファイルを入力とし、期待される擬似コード出力と一致するかを比較。
-    * フィクスチャには、IB Pseudocode Specification に記載のある各種データ構造、演算子、制御構造、メソッド呼び出しパターンを網羅するテストケースを含める。
-        * 配列の操作 (宣言、代入、アクセス)
-        * 文字列の操作
-        * コレクション、スタック、キューの各メソッド呼び出し
-        * 全ての論理演算子、比較演算子、算術演算子 (`mod`, `div` 含む)
-        * `if-then-else`, `loop while`, `loop for`, `loop repeat-until`, `case of`
-        * `System.out.print/println` および `Scanner` を利用した入出力
-        * `main` メソッドおよびその他のメソッド（コメント化されるケースも含む）
-        * コメントの保持
-        * 深いネスト構造（if文やループが10階層以上ネストしているケース）
+### 7.1 メインテストファイル (`__tests__/java-ib-parser.test.ts`)
+
+現在のテスト実装は `__tests__/java-ib-parser.test.ts` に集約されており、以下の変換機能を網羅的にテストしている：
+
+**基本変換テスト**:
+* `should convert variable declaration and assignment for int, String, boolean`
+    * Java: `int count = 10; String name = "Test"; boolean flag = true;`
+    * 期待値: `COUNT ← 10\nNAME ← "Test"\nFLAG ← TRUE`
+
+* `should convert System.out.println to output`
+    * Java: `System.out.println("Hello World"); System.out.println(count);`
+    * 期待値: `output "Hello World"\noutput COUNT`
+
+**制御構造テスト**:
+* `should convert simple if statement`
+    * Java: `if (x > 5) { System.out.println("Greater"); }`
+    * 期待値: `if X > 5 then\n    output "Greater"\nend if`
+
+* `should convert if-else statement`
+    * Java: `if (y < 5) { ... } else { ... }`
+    * 期待値: `if Y < 5 then\n    output "Less"\nelse\n    output "Not less"\nend if`
+
+* `should convert for loop (increment)`
+    * Java: `for (int i = 0; i < 3; i++) { System.out.println(i); }`
+    * 期待値: `loop I from 0 to 2\n    output I\nend loop`
+
+* `should convert while loop`
+    * Java: `while (k < 3) { System.out.println(k); k++; }`
+    * 期待値: `loop while K < 3\n    output K\n    K ← K + 1\nend loop`
+
+* `should convert nested if statements`
+    * ネストした if 文の正確な変換とインデント処理
+
+* `should convert if-else-if-else chain`
+    * 複数の else if 条件分岐の変換
+
+**演算子・式テスト**:
+* `should convert arithmetic operations`
+    * Java: `int sum = a + b; int quot = a / b; int rem = a % b;`
+    * 期待値: `SUM ← A + B; QUOT ← A DIV B; REM ← A MOD B`
+
+* `should convert increment and decrement operations`
+    * Java: `val++; anotherVal--;`
+    * 期待値: `VAL ← VAL + 1; ANOTHERVAL ← ANOTHERVAL - 1`
+
+* `should convert comparison operations`
+    * Java: `p == q; p != q; p >= q; p <= q`
+    * 期待値: `P = Q; P ≠ Q; P ≥ Q; P ≤ Q`
+
+* `should convert logical operations`
+    * Java: `condition1 && condition2; condition1 || condition2; !condition1`
+    * 期待値: `CONDITION1 AND CONDITION2; CONDITION1 OR CONDITION2; NOT CONDITION1`
+
+* `should convert complex arithmetic expressions`
+    * 複雑な括弧付き演算式の変換と演算子優先順位の処理
+
+**文字列処理テスト**:
+* `should convert string concatenation`
+    * Java: `String fullName = firstName + " " + lastName;`
+    * 期待値: `FULLNAME ← FIRSTNAME + " " + LASTNAME`
+
+### 7.2 テスト実装の特徴
+
+**デバッグ機能**:
+* `java-ast` パーサーの直接呼び出しによるAST出力
+* 詳細なコンソールログ出力（期待値vs実際値の比較）
+* 文字レベルでの差分検出機能
+* 行ごとの詳細比較機能
+
+**テストセットアップ**:
+* `beforeEach()` で `Java2IB` パーサーインスタンスを初期化
+* `describe()` ブロックで「Java to IB Pseudocode Parser」として統合
+
+### 7.3 テスト方針
+
+* 現在の `__tests__/java-ib-parser.test.ts` で十分
+* 基本的な変換機能のテストに集中
+* 複雑なエッジケースは対象外
 
 --- 
 
-## 8️⃣ 実装上の注意点と検討事項
+## 8️⃣ 実装上の注意点
 
-### 8.1 Visitor (CST → IR 変換)
+### 8.1 基本方針
 
-*   **状態管理**: Visitor内で現在のコンテキスト（例：ループ内にいるか、if文の条件式内かなど）を適切に管理し、IRノード生成に活かす。
-*   **網羅性**: `tree-sitter-java` が生成する全てのCSTノードタイプに対して、対応するVisitor処理を定義するか、意図的に無視するかの判断が必要。未対応ノードは警告を出すか、コメントとしてスルーする。
-*   **Java特有構文の処理**: IB疑似コードに直接対応しないJava構文（ラムダ式、Stream API、アノテーション、ジェネリクスの複雑な型情報など）は、以下のように段階的に対応を検討する。
-    *   フェーズ1: コメントアウトまたは警告表示。
-    *   フェーズ2: 限定的なパターンについて、単純なIB疑似コード表現に置き換え（例：簡単なラムダ式をインライン処理に展開）。
-    *   高度なものは変換対象外とし、ドキュメントで明記。
-*   **演算子の優先順位と括弧**: JavaとIB疑似コードで演算子の優先順位が異なる場合や、変換によって曖昧さが生じる可能性がある場合は、IR生成時またはEmitterで適切に括弧を補う必要がある。
-*   **変数スコープと命名**: Javaの変数スコープ（ブロックローカル、メソッドローカル、クラスメンバ等）をIB疑似コードのより単純なスコープ概念にマッピングする際の衝突を避けるため、IRで変数名を一意化する戦略を検討（例：サフィックス付与）。IBの変数は大文字であるため、変換時に大文字化する。
+* **シンプルさ優先**: 複雑な機能は実装しない
+* **基本構文のみ**: if, for, while, 変数宣言、出力のみサポート
+* **直接変換**: 中間表現は使わず、CSTから直接擬似コードに変換
+* **エラー処理**: 未対応構文は無視またはコメント化
 
-### 8.2 Emitter (IR → 擬似コード出力)
+### 8.2 変換ルール
 
-*   **インデント処理**: IRの階層構造に基づいて、擬似コードのインデントを正確に生成する。
-*   **終端記号の自動挿入**: `IF`に対する`ENDIF`、`LOOP`に対する`ENDLOOP`など、ブロック構造の終端記号をIRの`kind`に基づいて自動的に挿入する。
-*   **可読性**: 生成される擬似コードの可読性を高めるため、適切な改行やスペースの挿入ルールを設ける。
-*   **`div` vs `/`**: Javaの `/` 演算子は、オペランドが整数同士の場合は整数除算、浮動小数点数を含む場合は浮動小数点除算となる。IB疑似コードでは `div` が整数除算を明示するため、CST/IRレベルでオペランドの型情報を（限定的にでも）推測できない場合、ユーザーに選択を促すか、より安全な側に倒す（例：常に `/` を使い、コメントで注意を促す）などの対策が必要。
-
-### 8.3 全体的な課題
-
-*   **ソースマッピングの維持**: 生成された擬似コードの各行が、元のJavaソースコードのどの部分に対応するかの情報を保持し、デバッグやトレーサビリティに役立てる（VS Code拡張機能などで利用）。
-*   **設定可能性**: 変換ルールの細部（例：特定のJavaライブラリ関数の独自マッピング）をユーザーが設定ファイル等でカスタマイズできる仕組みを将来的に検討。
-*   **大規模ファイルの処理**: 数千行を超えるような大規模Javaファイルの変換パフォーマンスとメモリ使用量を監視し、必要に応じて最適化を行う（ストリーミング処理の導入検討など）。
+* **変数名**: 全て大文字に変換
+* **演算子**: 基本的なもののみ（`==` → `=`, `!=` → `≠`, `%` → `mod`）
+* **制御構造**: 基本的なif, for, whileのみ
+* **出力**: `System.out.println()` → `output`
