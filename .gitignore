@@ -27,3 +27,27 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# temporary files and build artifacts
+/dist/
+/temp/
+test-output.css
+test-results.json
+debug.md
+
+# debug and test files
+debug-*.js
+debug-*.mjs
+debug-*.cjs
+test-expression-parser-*.js
+test-expression-parser-*.mjs
+test-expression-parser-*.cjs
+test-runner.js
+extract-failed-tests.js
+
+# IDE and editor files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
