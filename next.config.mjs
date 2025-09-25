@@ -11,6 +11,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    optimizeCss: false,
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // クライアントサイドでNode.jsモジュールを使用しないようにする
@@ -27,6 +30,12 @@ const nextConfig = {
         url: false,
         fsevents: false,
       };
+      
+      // Monaco Editor用の設定
+      config.module.rules.push({
+        test: /\.ttf$/,
+        type: 'asset/resource',
+      });
       
       // fseventsモジュールを完全に無視する
       config.module = config.module || {};

@@ -49,7 +49,7 @@ export function MonacoEditorWrapper({
           const loaderScript = document.createElement("script")
           loaderScript.id = "monaco-loader"
           loaderScript.src =
-            "https://unpkg.com/monaco-editor@latest/min/vs/loader.js"
+            "https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"
           document.head.appendChild(loaderScript)
           
           await new Promise((resolve, reject) => {
@@ -72,7 +72,7 @@ export function MonacoEditorWrapper({
 
         window.require.config({
           paths: {
-            vs: "https://unpkg.com/monaco-editor@latest/min/vs",
+            vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs",
           },
         })
 
