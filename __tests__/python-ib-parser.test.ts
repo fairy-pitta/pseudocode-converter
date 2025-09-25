@@ -1,16 +1,11 @@
-import { IBParser } from '../lib/python-to-pseudocode-parser-ib';
+import { pythonToIB } from 'python2ib';
 
 describe('Python to IB Pseudocode Parser', () => {
-  let parser: IBParser;
-
-  beforeEach(() => {
-    parser = new IBParser();
-  });
 
   test('should convert simple assignment', () => {
     const pythonCode = 'x = 10';
     const expectedPseudocode = 'x ← 10';
-    const result = parser.parse(pythonCode);
+    const result = pythonToIB(pythonCode);
     
     
     
@@ -20,7 +15,7 @@ describe('Python to IB Pseudocode Parser', () => {
   test('should convert print statement', () => {
     const pythonCode = 'print("Hello, World!")';
     const expectedPseudocode = 'OUTPUT "Hello, World!"';
-    const result = parser.parse(pythonCode);
+    const result = pythonToIB(pythonCode);
     
     
     
@@ -30,7 +25,7 @@ describe('Python to IB Pseudocode Parser', () => {
   test('should convert input statement', () => {
     const pythonCode = 'name = input("Enter your name: ")';
     const expectedPseudocode = 'INPUT name';
-    const result = parser.parse(pythonCode);
+    const result = pythonToIB(pythonCode);
     
     
     
@@ -47,7 +42,7 @@ describe('Python to IB Pseudocode Parser', () => {
       '  OUTPUT "Greater"',
       'END IF'
     ].join('\n');
-    const result = parser.parse(pythonCode);
+    const result = pythonToIB(pythonCode);
     
     
     

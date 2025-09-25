@@ -1,6 +1,6 @@
-import { JavaIBParser } from './lib/java-ib/index.ts';
+import { Java2IB } from './lib/java-to-pseudocode-parser-ib.ts';
 
-const parser = new JavaIBParser();
+const parser = new Java2IB();
 
 const javaCode = `int p = 10;
 int q = 5;

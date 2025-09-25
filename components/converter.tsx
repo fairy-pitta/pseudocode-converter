@@ -20,8 +20,9 @@ import { MonacoEditorWrapper } from "./monaco-editor-wrapper"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from 'react';
 import UnsupportedSyntaxPopup from './unsupported-syntax-popup';
-import { Java2IB } from '@/lib/java-to-pseudocode-parser-ib';
-import { Java2IG } from '@/lib/java-to-pseudocode-parser-igsce';
+import { JavaToIBConverter } from 'java2ib';
+import { convertPythonToIB } from 'python2ib';
+// import { Converter as PythonToIGCSEConverter } from 'python2igcse';
 
 interface DeepLStyleConverterProps {
   sourceCode: string
@@ -74,9 +75,9 @@ export function DeepLStyleConverter({
     pseudocodeStandard === "ib"
       ? { name: "IB Pseudocode", icon: "🎓", description: "IB Computer Science" }
       : {
-          name: "Cambridge Pseudocode",
+          name: "Cambridge Pseudocode (Coming Soon)",
           icon: "🏛️",
-          description: "IGCSE / AS & A-Level",
+          description: "Coming Soon",
         }
 
   /* ---------------------------- util functions ------------------------------ */
@@ -250,6 +251,7 @@ export function DeepLStyleConverter({
 
                 {/* Cambridge */}
                 <DropdownMenuItem
+                  disabled
                   onClick={() => onStandardChange("cambridge")}
                   className={`flex items-center gap-2 w-full p-2 text-sm rounded-md ${
                     pseudocodeStandard === "cambridge"
@@ -259,9 +261,9 @@ export function DeepLStyleConverter({
                 >
                   <span className="text-lg">🏛️</span>
                   <div className="flex-1">
-                    <div className="font-medium">Cambridge Pseudocode</div>
+                    <div className="font-medium">Cambridge Pseudocode (Coming Soon)</div>
                     <div className="text-xs text-gray-500">
-                      IGCSE / AS & A-Level
+                      Coming Soon
                     </div>
                   </div>
                 </DropdownMenuItem>
@@ -323,15 +325,27 @@ const Converter = () => {
     setShowUnsupportedPopup(true);
   };
 
-  const convertCode = (sourceCode: string, parserType: 'ib' | 'igsce') => {
-    const options = { onUnsupportedSyntax: handleUnsupportedSyntax };
-    
-    if (parserType === 'ib') {
-      const parser = new Java2IB();
-      return parser.parse(sourceCode);
-    } else {
-      const parser = new Java2IG(options);
-      return parser.parse(sourceCode);
+  const convertCode = (sourceCode: string, parserType: 'ib' | 'igsce', language: 'python' | 'java' = 'java') => {
+    try {
+      if (language === 'java') {
+        if (parserType === 'ib') {
+          const converter = new JavaToIBConverter();
+          return converter.convert(sourceCode).pseudocode;
+        } else {
+          return "Java to IGCSE conversion is coming soon!";
+        }
+      } else {
+        // Python変換の場合
+        if (parserType === 'ib') {
+          return convertPythonToIB(sourceCode);
+        } else {
+          // python2igcseはNode.js依存のため、ブラウザ環境では使用できない
+          return "Python to IGCSE conversion requires server-side processing.";
+        }
+      }
+    } catch (error) {
+      handleUnsupportedSyntax(`Unsupported ${language} syntax`, sourceCode);
+      return "";
     }
   };
 

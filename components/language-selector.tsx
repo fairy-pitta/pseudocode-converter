@@ -27,7 +27,13 @@ export function LanguageSelector({
   const handleSwap = () => {
     setIsSwapping(true)
     setTimeout(() => {
-      onStandardChange(pseudocodeStandard === "ib" ? "cambridge" : "ib")
+      // Cambridge は Coming Soon のため、切り替え不可
+      if (pseudocodeStandard === "cambridge") {
+        onStandardChange("ib")
+      } else {
+        // 切り替え先が cambridge になるためブロック
+        // no-op
+      }
       setIsSwapping(false)
     }, 150)
   }
@@ -45,8 +51,8 @@ export function LanguageSelector({
         }
       case "cambridge":
         return {
-          name: "Cambridge Pseudocode",
-          description: "IGCSE/AS & A Level (2026)",
+          name: "Cambridge Pseudocode (Coming Soon)",
+          description: "Coming Soon",
           flag: "🏛️",
           color: "text-purple-600",
           bgColor: "bg-purple-50",
@@ -77,7 +83,8 @@ export function LanguageSelector({
           size="sm"
           onClick={handleSwap}
           className={`p-2 transition-transform duration-150 ${isSwapping ? "rotate-180" : ""}`}
-          disabled={isSwapping}
+          disabled={isSwapping || pseudocodeStandard === "ib"}
+          title={pseudocodeStandard === "ib" ? "Cambridge is coming soon" : undefined}
         >
           <RotateCcw2 className="w-4 h-4" />
         </Button>
@@ -116,14 +123,15 @@ export function LanguageSelector({
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem
+                disabled
                 onClick={() => onStandardChange("cambridge")}
                 className={pseudocodeStandard === "cambridge" ? "bg-purple-50" : ""}
               >
                 <div className="flex items-center gap-3 w-full">
                   <span className="text-lg">🏛️</span>
                   <div>
-                    <div className="font-medium">Cambridge Pseudocode</div>
-                    <div className="text-xs text-gray-500">IGCSE/AS & A Level (2026)</div>
+                    <div className="font-medium">Cambridge Pseudocode (Coming Soon)</div>
+                    <div className="text-xs text-gray-500">Coming Soon</div>
                   </div>
                   {pseudocodeStandard === "cambridge" && <div className="ml-auto w-2 h-2 bg-purple-600 rounded-full" />}
                 </div>

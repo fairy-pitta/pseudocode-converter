@@ -1,9 +1,7 @@
 
 
-import { Java2IB } from '../lib/java-ib';
-import { parse as javaAstParse } from 'java-ast'; // Direct import for debugging
-import * as fs from 'fs'; // For writing to file
-import * as path from 'path'; // For path manipulation
+import { Java2IB } from '../lib/java-to-pseudocode-parser-ib';
+// fs and path imports are no longer needed
 
 describe('Java to IB Pseudocode Parser', () => {
   let parser: Java2IB;
@@ -21,21 +19,7 @@ describe('Java to IB Pseudocode Parser', () => {
         }
     }`;
     const expectedPseudocode = `COUNT ← 10\nNAME ← "Test"\nFLAG ← TRUE`;
-    // Debug: Directly use java-ast.parse and write output to a file
-    try {
-      const rawAst = javaAstParse(javaCode);
-      const outputPath = path.join(__dirname, 'ast_output.json');
-      fs.writeFileSync(outputPath, JSON.stringify(rawAst, (key, value) => {
-        // Handle circular references, common in ANTLR contexts
-        if (key === '_parent' || key === 'parentCtx' || key === 'parent') return '[Circular]';
-        if (value instanceof Map) return Array.from(value.entries()); // Convert Maps to arrays
-        if (value instanceof Set) return Array.from(value); // Convert Sets to arrays
-        return value;
-      }, 2));
-      console.log(`AST output written to ${outputPath}`);
-    } catch (e) {
-      console.error('Error during direct java-ast parse or file write:', e);
-    }
+    // Debug output is no longer needed as we're using the npm package
 
     const actualPseudocode = parser.parse(javaCode);
     console.log('--- Test: should convert variable declaration and assignment for int, String, boolean ---');

@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { IBParser } from "@/lib/python-to-pseudocode-parser-ib"
-import { IGCSEPseudocodeParser } from "@/lib/python-to-pseudocode-parser-igcse"
+import { convertPythonToIB } from "python2ib"
+// python2igcseはサーバーサイドでのみ使用するため、クライアントサイドではインポートしない
+// import { Converter as PythonToIGCSEConverter } from "python2igcse"
+import { JavaToIBConverter } from "java2ib"
 import { DeepLStyleConverter } from "@/components/converter"
 
 export default function PythonToPseudocodePage() {
@@ -14,43 +16,116 @@ export default function PythonToPseudocodePage() {
   const [pseudocodeStandard, setPseudocodeStandard] = useState<"ib" | "cambridge">("ib")
   const [sourceLanguage, setSourceLanguage] = useState<"python" | "java">("python") 
 
-  const ibParser = new IBParser()
-  const cambridgeParser = new IGCSEPseudocodeParser()
-  const parser = pseudocodeStandard === "ib" ? ibParser : cambridgeParser
+  // パーサーは直接関数として使用するか、クラスをインスタンス化して使用します
+  const javaIBConverter = new JavaToIBConverter()
+  // pythonIGConverterはサーバーサイドでのみ使用するため、クライアントサイドでは初期化しない
 
   const convertToPseudocode = useCallback(
-    async (code?: string) => {
-      const codeToConvert = code || pythonCode
+    async (code?: string, opts?: { silent?: boolean }) => {
+      const codeToConvert = code ?? pythonCode
+      const silent = !!opts?.silent
 
       if (!codeToConvert.trim()) {
-        toast({
-          title: "Error",
-          description: "Please enter Python code to convert",
-          variant: "destructive",
-        })
+        if (!silent) {
+          toast({
+            title: "Error",
+            description: "Please enter code to convert",
+            variant: "destructive",
+          })
+        }
         return
       }
 
-      setIsConverting(true)
+      if (!silent) setIsConverting(true)
 
       try {
-        setTimeout(() => {
-          const converted = parser.parse(codeToConvert)
-          setPseudocode(converted)
-          setIsConverting(false)
-        }, 300)
+        let converted = ''
+
+        if (sourceLanguage === 'python') {
+          if (pseudocodeStandard === 'ib') {
+            try {
+              const result: any = convertPythonToIB(codeToConvert)
+              if (result && typeof result.then === 'function') {
+                converted = await result
+              } else {
+                converted = result as string
+              }
+            } catch (err) {
+              if (!silent) {
+                console.error("Python to IB conversion error:", err)
+                toast({
+                  title: "Conversion Error",
+                  description: "Invalid or incomplete Python code. Please check your syntax.",
+                  variant: "destructive",
+                })
+              }
+              return
+            }
+          } else {
+            converted = "Python to IGCSE conversion requires server-side processing."
+          }
+        } else {
+          // Java変換
+          if (pseudocodeStandard === 'ib') {
+            try {
+              const res: any = javaIBConverter.convert(codeToConvert)
+              if (res && typeof res.then === 'function') {
+                const resolved: any = await res
+                converted = resolved.pseudocode
+              } else {
+                converted = res.pseudocode
+              }
+            } catch (err) {
+              if (!silent) {
+                console.error("Java to IB conversion error:", err)
+                toast({
+                  title: "Conversion Error",
+                  description: "Invalid or unsupported Java code. Please check your syntax.",
+                  variant: "destructive",
+                })
+              }
+              return
+            }
+          } else {
+            converted = "Java to IGCSE conversion is coming soon!"
+          }
+        }
+
+        setPseudocode(converted)
       } catch (error) {
-        console.error("Conversion error:", error)
-        toast({
-          title: "Conversion Error",
-          description: "An error occurred while converting the code",
-          variant: "destructive",
-        })
-        setIsConverting(false)
+        if (!silent) {
+          console.error("Conversion error:", error)
+          toast({
+            title: "Conversion Error",
+            description: "An unexpected error occurred while converting the code",
+            variant: "destructive",
+          })
+        }
+      } finally {
+        if (!silent) setIsConverting(false)
       }
     },
-    [pythonCode, parser, toast],
+    [pythonCode, pseudocodeStandard, sourceLanguage, toast],
   )
+
+  // Auto-convert when code, language, or standard changes (debounced)
+  useEffect(() => {
+    const code = pythonCode;
+    if (!code.trim()) {
+      setPseudocode("");
+      return;
+    }
+    const timer = setTimeout(() => {
+      // Run conversion with current code and settings silently (no toasts/spinner)
+      const p = convertToPseudocode(code, { silent: true });
+      if (p && typeof (p as Promise<any>).then === 'function') {
+        (p as Promise<any>).catch(() => {
+          // swallow any auto-convert errors to avoid noisy overlays in dev
+        });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [pythonCode, sourceLanguage, pseudocodeStandard, convertToPseudocode]);
 
   const handleCodeChange = useCallback((value: string) => {
     setPythonCode(value)
