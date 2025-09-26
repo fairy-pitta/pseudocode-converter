@@ -152,9 +152,6 @@ export default function PythonToPseudocodePage() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <header className="text-center my-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Pseudocode Converter</h1>
-      </header>
 
       {/* Main Converter */}
       <div className="mb-8">
