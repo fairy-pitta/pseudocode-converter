@@ -2,6 +2,8 @@
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
+  basePath: '/pseudocode-converter',
+  assetPrefix: '/pseudocode-converter',
   eslint: {
     ignoreDuringBuilds: true,
   },
